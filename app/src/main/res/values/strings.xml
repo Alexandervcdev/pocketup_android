@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">pocketupDM</string>
+    <string name="tv_login_register">¿No tienes cuenta? <u>Regístrate aquí</u></string>
+    <string name="login">Iniciar sesión</string>
+    <string name="email">Correo electrónico</string>
+    <string name="pass">Contraseña</string>
+    <string name="register">Registro</string>
+    <string name="name">Nombre</string>
+    <string name="bt_register">Registrarse</string>
+    <string name="tv_register_login">¿Ya tienes cuenta? <u>Inicia sesión</u></string>
+</resources>
