@@ -8,4 +8,6 @@ import retrofit2.http.POST;
 public interface ApiService {
     @POST("user/register")
     Call<Usuario> saveUser(@Body UsuarioRegistroRequest request);
+    @POST("user/google-auth")
+    Call<Usuario> googleAuth(@Body UsuarioRegistroRequest request);
 }

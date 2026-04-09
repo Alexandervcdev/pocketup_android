@@ -1,6 +1,7 @@
 package com.pocketupdm;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -49,7 +50,6 @@ public class RegisterActivity extends AppCompatActivity {
         //metodos
         loginClickListener();
         btnRegistrar.setOnClickListener(v -> ejecutarRegistro());
-        
     }
 
     private void ejecutarRegistro() {
@@ -83,10 +83,7 @@ public class RegisterActivity extends AppCompatActivity {
                 Usuario usuarioCreado = response.body();
                 String nombre = (usuarioCreado != null) ? usuarioCreado.getNombre() : "";
                 Toast.makeText(RegisterActivity.this, "¡Registro exitoso! Bienvenido " + nombre, Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
+                irALogin();
             } else {
                 // ERROR CONTROLADO: El servidor respondió (ej: 400 Bad Request)
                 String mensajeError = ErrorUtil.parseError(response);
@@ -100,6 +97,13 @@ public class RegisterActivity extends AppCompatActivity {
             Toast.makeText(RegisterActivity.this, "Fallo de red: " + t.getMessage(), Toast.LENGTH_SHORT).show();
         }
     });
+    }
+
+    private void irALogin() {
+        Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     private void loginClickListener() {

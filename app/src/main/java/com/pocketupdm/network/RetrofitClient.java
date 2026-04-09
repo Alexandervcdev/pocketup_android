@@ -9,7 +9,7 @@ public class RetrofitClient {
      * Utiliza el patrón Singleton para asegurar que solo exista una instancia del cliente HTTP,
      * optimizando el uso de recursos y memoria de la aplicación.
      */
-    private static final String BASE_URL = "https://alexandervcdev-pocketup-api.hf.space/";
+    private static final String BASE_URL = "https://alexandervcdev-pocketup-api.hf.space";
     private static Retrofit retrofit = null;
 
     /**

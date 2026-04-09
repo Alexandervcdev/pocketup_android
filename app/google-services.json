@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "20144824463",
+    "project_id": "pocketup-118c0",
+    "storage_bucket": "pocketup-118c0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:20144824463:android:206e5fba9b640921d890fa",
+        "android_client_info": {
+          "package_name": "com.pocketupdm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "20144824463-l1k83v13fg7ohikg8019is5msfgcsdss.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pocketupdm",
+            "certificate_hash": "4dd6f48b8d05ac8582b37ab3a580cee4a95075a1"
+          }
+        },
+        {
+          "client_id": "20144824463-dlgbjshv63cg2aohp3dffb6ufcuonqnn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFd_50yYvcndZe-4QaCqLCNF0-HyYQQR4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "20144824463-dlgbjshv63cg2aohp3dffb6ufcuonqnn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
