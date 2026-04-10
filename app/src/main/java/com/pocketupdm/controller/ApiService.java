@@ -1,4 +1,6 @@
 package com.pocketupdm.controller;
+import com.pocketupdm.dto.MovimientoRequest;
+import com.pocketupdm.dto.MovimientoResponse;
 import com.pocketupdm.dto.UsuarioLoginRequest;
 import com.pocketupdm.dto.UsuarioRegistroRequest;
 import com.pocketupdm.model.Usuario;
@@ -13,4 +15,6 @@ public interface ApiService {
     Call<Usuario> googleAuth(@Body UsuarioRegistroRequest request);
     @POST("login")
     Call<Usuario> loginUser(@Body UsuarioLoginRequest request);
+    @POST("movimientos/nuevo")
+    Call<MovimientoResponse> registrarMovimiento(@Body MovimientoRequest request);
 }
