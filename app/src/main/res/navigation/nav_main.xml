@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_main"
+    app:startDestination="@id/nav_home">
+
+    <fragment
+        android:id="@+id/nav_home"
+        android:name="com.pocketupdm.fragment.HomeFragment"
+        android:label="fragment_home"
+        tools:layout="@layout/fragment_home" />
+    <fragment
+        android:id="@+id/nav_graphic"
+        android:name="com.pocketupdm.fragment.GraphicFragment"
+        android:label="fragment_graphic"
+        tools:layout="@layout/fragment_graphic" />
+    <fragment
+        android:id="@+id/nav_character"
+        android:name="com.pocketupdm.fragment.CharacterFragment"
+        android:label="fragment_character"
+        tools:layout="@layout/fragment_character" />
+    <fragment
+        android:id="@+id/nav_note"
+        android:name="com.pocketupdm.fragment.NoteFragment"
+        android:label="fragment_note"
+        tools:layout="@layout/fragment_note" />
+    <fragment
+        android:id="@+id/nav_setting"
+        android:name="com.pocketupdm.fragment.SettingFragment"
+        android:label="fragment_setting"
+        tools:layout="@layout/fragment_setting" />
+</navigation>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_home"
+        android:title="@string/Main" />
+    <item
+        android:id="@+id/nav_graphic"
+        android:icon="@drawable/ic_chart"
+        android:title="@string/grafics" />
+    <item
+        android:id="@+id/nav_character"
+        android:icon="@drawable/ic_person"
+        android:title="@string/Character" />
+    <item
+        android:id="@+id/nav_note"
+        android:icon="@drawable/ic_note"
+        android:title="@string/notes" />
+    <item
+        android:id="@+id/nav_setting"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/Settings" />
+</menu>
