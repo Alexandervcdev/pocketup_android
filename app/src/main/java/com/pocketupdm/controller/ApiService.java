@@ -1,4 +1,5 @@
 package com.pocketupdm.controller;
+import com.pocketupdm.dto.UsuarioLoginRequest;
 import com.pocketupdm.dto.UsuarioRegistroRequest;
 import com.pocketupdm.model.Usuario;
 
@@ -10,4 +11,6 @@ public interface ApiService {
     Call<Usuario> saveUser(@Body UsuarioRegistroRequest request);
     @POST("user/google-auth")
     Call<Usuario> googleAuth(@Body UsuarioRegistroRequest request);
+    @POST("login")
+    Call<Usuario> loginUser(@Body UsuarioLoginRequest request);
 }

@@ -8,4 +8,8 @@
     <string name="name">Nombre</string>
     <string name="bt_register">Registrarse</string>
     <string name="tv_register_login">¿Ya tienes cuenta? <u>Inicia sesión</u></string>
+    <string name="sing_in">Ingresar</string>
+    <string name="create_account">Crear cuenta</string>
+
+    <string name="remember_user">Recordar usuario</string>
 </resources>

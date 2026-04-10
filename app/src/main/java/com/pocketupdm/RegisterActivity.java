@@ -52,6 +52,16 @@ public class RegisterActivity extends AppCompatActivity {
         btnRegistrar.setOnClickListener(v -> ejecutarRegistro());
     }
 
+    /**
+     * Ejecuta la lógica principal para registrar un nuevo usuario en el sistema de forma manual.
+     * 1. Extrae y limpia los datos de los campos de texto (nombre, email, password).
+     * 2. Realiza una validación local para asegurar que no se envíen campos vacíos.
+     * 3. Construye el DTO UsuarioRegistroRequest.
+     * 4. Realiza la llamada asíncrona a la API (/user/register) mediante RetrofitClient.
+     * * Gestiona las respuestas: En caso de éxito (201), notifica al usuario y redirige al Login.
+     * En caso de fallo (ej. email duplicado), utiliza ErrorUtil para parsear y mostrar el
+     * mensaje exacto generado por el Backend, evitando cierres inesperados.
+     */
     private void ejecutarRegistro() {
         //recogida de los datos de los campos.
         String nombre = etNombre.getText().toString().trim();
@@ -83,7 +93,7 @@ public class RegisterActivity extends AppCompatActivity {
                 Usuario usuarioCreado = response.body();
                 String nombre = (usuarioCreado != null) ? usuarioCreado.getNombre() : "";
                 Toast.makeText(RegisterActivity.this, "¡Registro exitoso! Bienvenido " + nombre, Toast.LENGTH_LONG).show();
-                irALogin();
+                com.pocketupdm.utils.NavigationUtil.irALogin(RegisterActivity.this);
             } else {
                 // ERROR CONTROLADO: El servidor respondió (ej: 400 Bad Request)
                 String mensajeError = ErrorUtil.parseError(response);
@@ -99,13 +109,12 @@ public class RegisterActivity extends AppCompatActivity {
     });
     }
 
-    private void irALogin() {
-        Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
-
+    /**
+     * Configura el evento de clic para el texto inferior de la pantalla
+     * (típicamente "¿Ya tienes cuenta? Inicia sesión").
+     * Permite al usuario navegar a la pantalla de inicio de sesión (LoginActivity)
+     * sin limpiar la pila de navegación, facilitando el flujo libre entre Login y Registro.
+     */
     private void loginClickListener() {
         TextView tvRegister = findViewById(R.id.tv_register_login);
         tvRegister.setOnClickListener(new View.OnClickListener() {
