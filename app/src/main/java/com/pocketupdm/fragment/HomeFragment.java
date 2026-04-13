@@ -7,10 +7,12 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.fragment.app.Fragment;
 import android.text.InputType;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.button.MaterialButton;
@@ -19,6 +21,7 @@ import com.pocketupdm.model.MovementType;
 import com.pocketupdm.dto.MovimientoRequest;
 import com.pocketupdm.dto.MovimientoResponse;
 import com.pocketupdm.network.RetrofitClient;
+import com.pocketupdm.utils.SessionManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,8 +32,10 @@ import retrofit2.Response;
 
 public class HomeFragment extends Fragment {
 
+    //variables globales
+    private SessionManager sessionManager;
+
     public HomeFragment() {
-        // Constructor obligatorio vacío
     }
 
     @Override
@@ -43,7 +48,10 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
+        sessionManager = new SessionManager(requireContext());
+        TextView tvWelcome = view.findViewById(R.id.tv_welcome);
+        String nombreUsuario = sessionManager.getUsuarioNombre();
+        tvWelcome.setText("¡Hola, " + nombreUsuario + "!");
         // 1. Buscamos el botón de gestión
         MaterialButton btnMenu = view.findViewById(R.id.btn_menu_movimientos);
 
@@ -95,8 +103,12 @@ public class HomeFragment extends Fragment {
     }
 
     private void enviarMovimientoAlBackend(BigDecimal importe, MovementType tipo) {
-        // TODO: Recuperar el ID real de SharedPreferences. Por ahora usamos el 29 de tu prueba exitosa.
-        Long usuarioId = 29L;
+        Long usuarioId = sessionManager.getUsuarioId();
+        if (usuarioId == -1L) {
+            Toast.makeText(getContext(), "Error: Sesión no válida", Toast.LENGTH_SHORT).show();
+            com.pocketupdm.utils.NavigationUtil.irALogin(getActivity());
+            return;
+        }
 
         // Fecha de hoy en formato ISO (YYYY-MM-DD)
         String fechaHoy = LocalDate.now().toString();
@@ -104,8 +116,7 @@ public class HomeFragment extends Fragment {
         MovimientoRequest request = new MovimientoRequest(
                 importe,
                 fechaHoy,
-                tipo,
-                "Registro desde el móvil",
+                tipo, "Registro desde el móvil",
                 usuarioId
         );
 
@@ -119,9 +130,9 @@ public class HomeFragment extends Fragment {
                     Toast.makeText(getContext(), "Error al guardar", Toast.LENGTH_SHORT).show();
                 }
             }
-
             @Override
             public void onFailure(Call<MovimientoResponse> call, Throwable t) {
+                //Log.e("RETROFIT_ERROR", "Error al procesar la respuesta: ", t);
                 Toast.makeText(getContext(), "Fallo de conexión: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });

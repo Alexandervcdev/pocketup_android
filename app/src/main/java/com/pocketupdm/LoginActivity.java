@@ -42,6 +42,7 @@ import com.pocketupdm.model.ApiError;
 import com.pocketupdm.model.Usuario;
 import com.pocketupdm.network.ErrorUtil;
 import com.pocketupdm.network.RetrofitClient;
+import com.pocketupdm.utils.SessionManager;
 
 import java.util.concurrent.Executor;
 
@@ -142,6 +143,9 @@ public class LoginActivity extends AppCompatActivity {
 
                     // ÉXITO: El servidor devolvió el objeto Usuario
                     Usuario usuario = response.body();
+                    SessionManager sessionManager = new SessionManager(LoginActivity.this);
+                    // 2. Guardamos el ID y el Nombre del usuario
+                    sessionManager.crearSesion(usuario.getId(), usuario.getNombre());
                     Toast.makeText(LoginActivity.this, "¡Bienvenido " + usuario.getNombre() + "!", Toast.LENGTH_SHORT).show();
                     com.pocketupdm.utils.NavigationUtil.irAMainActivity(LoginActivity.this);
                 } else {
@@ -278,8 +282,12 @@ public class LoginActivity extends AppCompatActivity {
         call.enqueue(new retrofit2.Callback<Usuario>() {
             @Override
             public void onResponse(Call<Usuario> call, retrofit2.Response<Usuario> response) {
-                if (response.isSuccessful()) {
-                    Log.d("LOGIN", "Usuario de Google registrado en el backend");
+                if (response.isSuccessful() && response.body() != null) {
+                    Usuario usuarioGoogle = response.body();
+                    SessionManager sessionManager = new SessionManager(LoginActivity.this);
+                    sessionManager.crearSesion(usuarioGoogle.getId(), usuarioGoogle.getNombre());
+                    //Log.d("LOGIN", "Usuario de Google registrado en el backend");
+                    Toast.makeText(LoginActivity.this, "¡Bienvenido " + usuarioGoogle.getNombre() + "!", Toast.LENGTH_SHORT).show();
                     com.pocketupdm.utils.NavigationUtil.irAMainActivity(LoginActivity.this);
                 } else {
                     Log.e("LOGIN", "Error crítico en el servidor: " + response.code());
@@ -294,17 +302,6 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Finaliza el flujo de autenticación y redirige al usuario a la pantalla principal (MainActivity).
-     * Limpia la pila de actividades (Clear Task) para evitar que el usuario pueda volver
-     * a la pantalla de Login presionando el botón de retroceso del dispositivo.
-     */
-    private void irAMainActivity() {
-        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
 
     /**
      * Método del ciclo de vida de Android. Se ejecuta cuando la actividad se vuelve visible.

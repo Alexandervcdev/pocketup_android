@@ -8,7 +8,7 @@ import java.time.LocalDate;
 public class MovimientoResponse {
     private Long id;
     private BigDecimal importe;
-    private LocalDate fecha;
+    private String fecha;
     private MovementType tipo;
     private String nota;
     private Long usuarioId;
@@ -21,7 +21,7 @@ public class MovimientoResponse {
         return importe;
     }
 
-    public LocalDate getFecha() {
+    public String getFecha() {
         return fecha;
     }
 
