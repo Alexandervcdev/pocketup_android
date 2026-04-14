@@ -6,6 +6,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
+
 import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -100,12 +102,21 @@ public class HomeFragment extends Fragment {
 
         view.findViewById(R.id.btn_opcion_ver_ingresos).setOnClickListener(v -> {
             bottomSheetDialog.dismiss();
-            Toast.makeText(getContext(), "Próximamente: Historial de Ingresos", Toast.LENGTH_SHORT).show();
+            // 1. Creamos la "cajita" y le metemos el número 0 -> 0 significando ingreso
+            Bundle bundle = new Bundle();
+            bundle.putInt("TAB_SELECCIONADO", 0);
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.action_nav_home_to_nav_historial,bundle);
         });
 
         view.findViewById(R.id.btn_opcion_ver_gastos).setOnClickListener(v -> {
             bottomSheetDialog.dismiss();
-            Toast.makeText(getContext(), "Próximamente: Historial de Gastos", Toast.LENGTH_SHORT).show();
+
+            // 1. Creamos la "cajita" y le metemos el número 1
+            Bundle bundle = new Bundle();
+            bundle.putInt("TAB_SELECCIONADO", 1);
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.action_nav_home_to_nav_historial,bundle);
         });
 
         // 4. Mostramos el menú en pantalla
