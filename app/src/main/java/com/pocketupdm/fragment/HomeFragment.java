@@ -15,8 +15,10 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.pocketupdm.R;
+import com.pocketupdm.dialogs.MovimientoBottomSheet;
 import com.pocketupdm.model.MovementType;
 import com.pocketupdm.dto.MovimientoRequest;
 import com.pocketupdm.dto.MovimientoResponse;
@@ -24,7 +26,11 @@ import com.pocketupdm.network.RetrofitClient;
 import com.pocketupdm.utils.SessionManager;
 
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.format.TextStyle;
+import java.util.Calendar;
+import java.util.Locale;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -49,90 +55,118 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         sessionManager = new SessionManager(requireContext());
+        //mensaje de bienvenida
         TextView tvWelcome = view.findViewById(R.id.tv_welcome);
         String nombreUsuario = sessionManager.getUsuarioNombre();
         tvWelcome.setText("¡Hola, " + nombreUsuario + "!");
+
+// 2. NUEVO: Subtítulo dinámico con el mes actual (Compatible con API 24+)
+        TextView tvSubtitle = view.findViewById(R.id.tv_subtitle);
+
+        // Usamos Calendar en lugar de LocalDate
+        Calendar calendar = Calendar.getInstance();
+
+        // "MMMM" significa "nombre completo del mes"
+        SimpleDateFormat sdfMes = new SimpleDateFormat("MMMM", new Locale("es", "ES"));
+        String mesActual = sdfMes.format(calendar.getTime());
+
+        // Ponemos la primera letra en mayúscula ("abril" -> "Abril")
+        mesActual = mesActual.substring(0, 1).toUpperCase() + mesActual.substring(1);
+
+        // Asignamos el texto final
+        tvSubtitle.setText("Este es tu progreso de " + mesActual);
+
         // 1. Buscamos el botón de gestión
         MaterialButton btnMenu = view.findViewById(R.id.btn_menu_movimientos);
-
         // 2. Configuramos el menú desplegable
-        btnMenu.setOnClickListener(v -> mostrarMenuOpciones(v));
+        btnMenu.setOnClickListener(v -> mostrarMenuOpciones());
     }
 
-    private void mostrarMenuOpciones(View view) {
-        PopupMenu popup = new PopupMenu(requireContext(), view);
-        // Añadimos las opciones al vuelo
-        popup.getMenu().add("Nuevo Ingreso");
-        popup.getMenu().add("Nuevo Gasto");
-        popup.getMenu().add("Ver Ingresos");
-        popup.getMenu().add("Ver Gastos");
+    private void mostrarMenuOpciones() {
+        // 1. Creamos el diálogo inferior
+        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(requireContext());
+        View view = getLayoutInflater().inflate(R.layout.layout_bottom_sheet_menu, null);
+        bottomSheetDialog.setContentView(view);
 
-        popup.setOnMenuItemClickListener(item -> {
-            switch (item.getTitle().toString()) {
-                case "Nuevo Ingreso":
-                    mostrarDialogoFormulario(MovementType.INGRESO);
-                    return true;
-                case "Nuevo Gasto":
-                    mostrarDialogoFormulario(MovementType.GASTO);
-                    return true;
-                default:
-                    return false;
+        // 3. Vinculamos los botones del panel y les damos funcionalidad
+        view.findViewById(R.id.btn_opcion_ingreso).setOnClickListener(v -> {
+            bottomSheetDialog.dismiss(); // Cerramos el menú
+            abrirBottomSheetMovimiento(MovementType.INGRESO); // Abrimos el formulario
+        });
+        view.findViewById(R.id.btn_opcion_gasto).setOnClickListener(v -> {
+            bottomSheetDialog.dismiss();
+            abrirBottomSheetMovimiento(MovementType.GASTO);
+        });
+
+        view.findViewById(R.id.btn_opcion_ver_ingresos).setOnClickListener(v -> {
+            bottomSheetDialog.dismiss();
+            Toast.makeText(getContext(), "Próximamente: Historial de Ingresos", Toast.LENGTH_SHORT).show();
+        });
+
+        view.findViewById(R.id.btn_opcion_ver_gastos).setOnClickListener(v -> {
+            bottomSheetDialog.dismiss();
+            Toast.makeText(getContext(), "Próximamente: Historial de Gastos", Toast.LENGTH_SHORT).show();
+        });
+
+        // 4. Mostramos el menú en pantalla
+        bottomSheetDialog.show();
+    }
+
+    private void abrirBottomSheetMovimiento(MovementType tipo) {
+        MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(tipo, new MovimientoBottomSheet.OnMovimientoGuardadoListener() {
+            @Override
+            public void onGuardar(BigDecimal importe, String nota, MovementType tipoMovimiento,String fecha) {
+                enviarMovimientoAlBackend(importe, nota, tipoMovimiento,fecha);
             }
         });
-        popup.show();
+        bottomSheet.show(getParentFragmentManager(), "MovimientoBottomSheet");
     }
 
-    private void mostrarDialogoFormulario(MovementType tipo) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        builder.setTitle(tipo == MovementType.INGRESO ? "Registrar Ingreso" : "Registrar Gasto");
-
-        // Creamos un campo de texto para el importe
-        final EditText inputImporte = new EditText(requireContext());
-        inputImporte.setHint("0.00");
-        inputImporte.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        builder.setView(inputImporte);
-
-        builder.setPositiveButton("Guardar", (dialog, which) -> {
-            String importeStr = inputImporte.getText().toString();
-            if (!importeStr.isEmpty()) {
-                enviarMovimientoAlBackend(new BigDecimal(importeStr), tipo);
-            }
-        });
-        builder.setNegativeButton("Cancelar", null);
-        builder.show();
-    }
-
-    private void enviarMovimientoAlBackend(BigDecimal importe, MovementType tipo) {
+    private void enviarMovimientoAlBackend(BigDecimal importe,String nota, MovementType tipo,String fecha) {
         Long usuarioId = sessionManager.getUsuarioId();
         if (usuarioId == -1L) {
             Toast.makeText(getContext(), "Error: Sesión no válida", Toast.LENGTH_SHORT).show();
             com.pocketupdm.utils.NavigationUtil.irALogin(getActivity());
             return;
         }
-
-        // Fecha de hoy en formato ISO (YYYY-MM-DD)
-        String fechaHoy = LocalDate.now().toString();
-
         MovimientoRequest request = new MovimientoRequest(
                 importe,
-                fechaHoy,
-                tipo, "Registro desde el móvil",
+                fecha,
+                tipo,
+                nota,
                 usuarioId
         );
 
         RetrofitClient.getApiService().registrarMovimiento(request).enqueue(new Callback<MovimientoResponse>() {
             @Override
             public void onResponse(Call<MovimientoResponse> call, Response<MovimientoResponse> response) {
+                // Validación de seguridad para evitar crashes si el fragmento se cerró antes de recibir respuesta
+                if (!isAdded() || getContext() == null) return;
+
                 if (response.isSuccessful() && response.body() != null) {
                     Toast.makeText(getContext(), "¡" + tipo.name() + " guardado con éxito!", Toast.LENGTH_SHORT).show();
-                    // Aquí es donde más adelante refrescaremos el número del balance en la tarjeta
+                    // Aquí refrescaremos el balance
                 } else {
-                    Toast.makeText(getContext(), "Error al guardar", Toast.LENGTH_SHORT).show();
+                    // ¡AQUÍ ESTÁ LA MAGIA DE DEPURACIÓN!
+                    try {
+                        // Leemos el mensaje real que manda Spring Boot
+                        String mensajeBackend = response.errorBody() != null ? response.errorBody().string() : "Error desconocido";
+                        Log.e("MOVIMIENTO_ERROR", "Código HTTP: " + response.code() + " | Razón: " + mensajeBackend);
+
+                        // O si prefieres usar tu ErrorUtil (descomenta esta línea y borra las de arriba):
+                        // String mensajeBackend = com.pocketupdm.network.ErrorUtil.parseError(response);
+
+                        Toast.makeText(getContext(), "Error " + response.code() + ": Revisa el Logcat", Toast.LENGTH_LONG).show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
+
             @Override
             public void onFailure(Call<MovimientoResponse> call, Throwable t) {
-                //Log.e("RETROFIT_ERROR", "Error al procesar la respuesta: ", t);
+                if (!isAdded() || getContext() == null) return;
+                Log.e("MOVIMIENTO_ERROR", "Fallo de red: ", t);
                 Toast.makeText(getContext(), "Fallo de conexión: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });

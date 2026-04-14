@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/white_pu"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:background="#D1D1D1" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:text="¿Qué deseas hacer?"
+        android:textColor="@color/black"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_opcion_ingreso"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginBottom="12dp"
+        android:text="Registrar Nuevo Ingreso"
+        android:textColor="@color/turquesa_oscuro"
+        app:icon="@android:drawable/ic_input_add"
+        app:iconTint="@color/turquesa_oscuro"
+        app:strokeColor="@color/turquesa_oscuro"
+        app:cornerRadius="12dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_opcion_gasto"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginBottom="24dp"
+        android:text="Registrar Nuevo Gasto"
+        android:textColor="@color/red"
+        app:icon="@android:drawable/ic_delete"
+        app:iconTint="@color/red"
+        app:strokeColor="@color/red"
+        app:cornerRadius="12dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="24dp"
+        android:background="#E0E0E0" /> <com.google.android.material.button.MaterialButton
+    android:id="@+id/btn_opcion_ver_ingresos"
+    style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+    android:layout_width="match_parent"
+    android:layout_height="50dp"
+    android:text="Ver mi historial de Ingresos"
+    android:textColor="@color/blue"
+    app:icon="@android:drawable/ic_menu_recent_history"
+    app:iconTint="@color/blue"
+    android:gravity="start|center_vertical" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_opcion_ver_gastos"
+        style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="Ver mi historial de Gastos"
+        android:textColor="@color/blue"
+        app:icon="@android:drawable/ic_menu_recent_history"
+        app:iconTint="@color/blue"
+        android:gravity="start|center_vertical" />
+
+</LinearLayout>

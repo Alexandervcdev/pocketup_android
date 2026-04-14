@@ -9,6 +9,7 @@
     <string name="bt_register">Registrarse</string>
     <string name="tv_register_login">¿Ya tienes cuenta? <u>Inicia sesión</u></string>
     <string name="sing_in">Ingresar</string>
+    <string name="sing_out">CERRAR SESIÓN</string>
     <string name="create_account">Crear cuenta</string>
     <string name="remember_user">Recordar usuario</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
@@ -17,4 +18,10 @@
     <string name="Character">Personaje</string>
     <string name="notes">Notas</string>
     <string name="Settings">Ajustes</string>
+    <string name="delete_account">Eliminar Cuenta</string>
+    <string name="edit_name">Editar nombre</string>
+    <string name="confirm">Confirmar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="confirmation_message">Mensaje de confirmación</string>
+    <string name="tittle_message">Título</string>
 </resources>
