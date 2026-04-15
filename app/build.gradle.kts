@@ -44,6 +44,8 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
+    // Glide: La librería para cargar imágenes de forma eficiente
+    implementation("com.github.bumptech.glide:glide:4.15.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
