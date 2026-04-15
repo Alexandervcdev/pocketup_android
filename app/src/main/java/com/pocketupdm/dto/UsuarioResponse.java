@@ -5,6 +5,8 @@ public class UsuarioResponse {
     private String pais;
     private String idioma;
 
+    private String moneda;
+
     public UsuarioResponse() {
     }
 
@@ -30,5 +32,13 @@ public class UsuarioResponse {
 
     public void setIdioma(String idioma) {
         this.idioma = idioma;
+    }
+
+    public String getMoneda() {
+        return moneda;
+    }
+
+    public void setMoneda(String moneda) {
+        this.moneda = moneda;
     }
 }

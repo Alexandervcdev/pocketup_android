@@ -1,6 +1,9 @@
 package com.pocketupdm.fragment;
 
+import static android.content.Context.MODE_PRIVATE;
+
 import android.app.Dialog;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -12,6 +15,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,6 +30,7 @@ import androidx.credentials.exceptions.ClearCredentialException;
 import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -35,7 +40,6 @@ import com.pocketupdm.dto.UsuarioUpdateRequest;
 import com.pocketupdm.network.RetrofitClient;
 import com.pocketupdm.utils.NavigationUtil;
 import com.pocketupdm.utils.SessionManager;
-
 import java.util.Map;
 
 import retrofit2.Call;
@@ -43,12 +47,13 @@ import retrofit2.Response;
 
 public class SettingFragment extends Fragment {
     // Variables de las vistas
-    private TextView tvName, tvPais, tvIdioma, tvTema;
+    private TextView tvName, tvPais, tvIdioma,tvMoneda, tvTema;
     private ImageView ivProfilePhoto;
 
-    // Aquí guardaremos los datos temporalmente antes de mandarlos a Spring Boot
+    // datos por defecto
     private String paisSeleccionado = "España";
     private String idiomaSeleccionado = "Español";
+    private String monedaSeleccionada = "EUR";
 
     public SettingFragment() {
     }
@@ -64,18 +69,26 @@ public class SettingFragment extends Fragment {
         tvName = view.findViewById(R.id.tv_profile_name);
         tvPais = view.findViewById(R.id.tv_profile_pais);
         tvIdioma = view.findViewById(R.id.tv_profile_idioma);
+        tvMoneda = view.findViewById(R.id.tv_profile_moneda);
         tvTema = view.findViewById(R.id.tv_profile_tema);
         ivProfilePhoto = view.findViewById(R.id.iv_profile_photo);
 
+        // Cargar el tema guardado en la memoria del teléfono
+        SharedPreferences prefs = requireActivity().getSharedPreferences("PreferenciasApp", MODE_PRIVATE);
+        String temaGuardado = prefs.getString("temaNombre", "Predeterminado");
+        tvTema.setText(temaGuardado);
+
         obtenerDatosPerfil();
         //cargarDatosDelUsuario();
-        view.findViewById(R.id.btn_edit_profile).setOnClickListener(v -> mostrarDialogoEditarNombre());
-        view.findViewById(R.id.row_edit_pais).setOnClickListener(v -> mostrarDialogoSeleccion("País", new String[]{"España", "México", "Colombia", "Argentina", "Chile", "Otro"}, tvPais, true));
-        view.findViewById(R.id.row_edit_idioma).setOnClickListener(v -> mostrarDialogoSeleccion("Idioma", new String[]{"Español", "Inglés"}, tvIdioma, false));
-        view.findViewById(R.id.row_edit_tema).setOnClickListener(v -> mostrarDialogoTema());
+        view.findViewById(R.id.btn_edit_profile).setOnClickListener(v -> mostrarBottomSheetEditarNombre());
+        view.findViewById(R.id.row_edit_pais).setOnClickListener(v -> mostrarBottomSheetSeleccion("País", new String[]{"España", "EE.UU", "Colombia", "Otro"}, tvPais, true));
+        view.findViewById(R.id.row_edit_idioma).setOnClickListener(v -> mostrarBottomSheetSeleccion("Idioma", new String[]{"Español", "Inglés"}, tvIdioma, false));
+        view.findViewById(R.id.row_edit_tema).setOnClickListener(v -> mostrarBottomSheetTema());
+        view.findViewById(R.id.row_edit_moneda).setOnClickListener(v -> mostrarBottomSheetMoneda());
 
         MaterialButton btnLogout = view.findViewById(R.id.btn_logout);
         MaterialButton btnDeleteAccount = view.findViewById(R.id.btn_delete_account);
+
 
         //listeners de los botones
             //cerrar sesion
@@ -132,6 +145,15 @@ public class SettingFragment extends Fragment {
                                 idiomaSeleccionado = "Español";
                             }
 
+                            // 4. Moneda (Lógica de Fallback)
+                            if (user.getMoneda() != null && !user.getMoneda().isEmpty()) {
+                                tvMoneda.setText(user.getMoneda());
+                                monedaSeleccionada = user.getMoneda();
+                            } else {
+                                tvMoneda.setText("EUR"); // Valor por defecto
+                                monedaSeleccionada = "EUR";
+                            }
+
                             // 4. Cargar Foto (Firebase o Google)
                             cargarFotoPerfil();
                         }
@@ -162,58 +184,119 @@ public class SettingFragment extends Fragment {
     /**
      * Abre un pop-up con un campo de texto para escribir el nuevo nombre
      */
-    private void mostrarDialogoEditarNombre() {
-        EditText input = new EditText(requireContext());
-        input.setText(tvName.getText().toString()); // Ponemos el nombre actual por defecto
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Editar Nombre")
-                .setView(input)
-                .setPositiveButton("Guardar", (dialog, which) -> {
-                    String nuevoNombre = input.getText().toString().trim();
-                    if (!nuevoNombre.isEmpty()) {
-                        tvName.setText(nuevoNombre);
-                        guardarCambiosEnBackend(); // Llamada a la API
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
+    /**
+     * Bottom Sheet con campo de texto para editar el nombre
+     */
+    private void mostrarBottomSheetEditarNombre() {
+        BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
+        View view = LayoutInflater.from(requireContext()).inflate(R.layout.layout_bottom_sheet_input, null);
+        dialog.setContentView(view);
+
+        EditText etNombre = view.findViewById(R.id.et_bottom_sheet_nombre);
+        MaterialButton btnGuardar = view.findViewById(R.id.btn_bottom_sheet_guardar);
+
+        // Pre-llenar con el nombre actual
+        etNombre.setText(tvName.getText().toString());
+        // Mover el cursor al final de la palabra
+        etNombre.setSelection(etNombre.getText().length());
+
+        btnGuardar.setOnClickListener(v -> {
+            String nuevoNombre = etNombre.getText().toString().trim();
+            if (!nuevoNombre.isEmpty()) {
+                tvName.setText(nuevoNombre);
+                guardarCambiosEnBackend(); // Esto actualizará Spring Boot
+                dialog.dismiss();
+            } else {
+                Toast.makeText(requireContext(), "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        dialog.show();
     }
 
     /**
-     * Abre un pop-up con una lista de opciones (ej: Países o Idiomas)
+     * Bottom Sheet Dinámico para País e Idioma
      */
-    private void mostrarDialogoSeleccion(String titulo, String[] opciones, TextView textViewDestino, boolean esPais) {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Selecciona tu " + titulo)
-                .setItems(opciones, (dialog, which) -> {
-                    String seleccion = opciones[which];
-                    textViewDestino.setText(seleccion); // Actualiza la pantalla
-                    if (esPais) paisSeleccionado = seleccion;
-                    else idiomaSeleccionado = seleccion;
-                    guardarCambiosEnBackend(); // Llamada a la API
-                })
-                .show();
+    private void mostrarBottomSheetSeleccion(String titulo, String[] opciones, TextView textViewDestino, boolean esPais) {
+        BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
+        View view = LayoutInflater.from(requireContext()).inflate(R.layout.layout_bottom_sheet_generico, null);
+        dialog.setContentView(view);
+
+        // 1. Ponemos el título (Ej: "Selecciona tu País")
+        TextView tvTitulo = view.findViewById(R.id.tv_bottom_sheet_titulo);
+        tvTitulo.setText("Selecciona tu " + titulo);
+
+        // 2. Buscamos el contenedor vacío
+        LinearLayout llOpciones = view.findViewById(R.id.ll_bottom_sheet_opciones);
+
+        // 3. Magia: Un bucle que crea las opciones dinámicamente
+        for (String opcion : opciones) {
+            TextView tvOpcion = new TextView(requireContext());
+            tvOpcion.setText(opcion);
+            tvOpcion.setTextSize(18f);
+            tvOpcion.setPadding(60, 40, 60, 40); // Espaciado interno para que sea fácil de tocar
+
+            // Le damos el efecto visual de "botón pulsable" (Ripple) nativo de Android
+            tvOpcion.setClickable(true);
+
+            // ¿Qué pasa al hacer clic?
+            tvOpcion.setOnClickListener(v -> {
+                textViewDestino.setText(opcion);
+                if (esPais) paisSeleccionado = opcion;
+                else idiomaSeleccionado = opcion;
+
+                guardarCambiosEnBackend();
+                dialog.dismiss();
+            });
+
+            // Añadimos el nuevo botón al contenedor
+            llOpciones.addView(tvOpcion);
+        }
+
+        dialog.show();
     }
 
     /**
-     * Abre un pop-up para cambiar el tema visual de la aplicación
+     * Bottom Sheet Dinámico exclusivo para el Tema
      */
-    private void mostrarDialogoTema() {
+    private void mostrarBottomSheetTema() {
         String[] opciones = {"Claro", "Oscuro", "Predeterminado"};
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Selecciona el tema")
-                .setItems(opciones, (dialog, which) -> {
-                    tvTema.setText(opciones[which]); // Actualiza el texto en pantalla
-                    // Aplicar el cambio de tema en Android inmediatamente
-                    if (which == 0) {
-                        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO);
-                    } else if (which == 1) {
-                        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES);
-                    } else {
-                        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-                    }
-                })
-                .show();
+        BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
+        View view = LayoutInflater.from(requireContext()).inflate(R.layout.layout_bottom_sheet_generico, null);
+        dialog.setContentView(view);
+        TextView tvTitulo = view.findViewById(R.id.tv_bottom_sheet_titulo);
+        tvTitulo.setText("Selecciona el tema visual");
+        LinearLayout llOpciones = view.findViewById(R.id.ll_bottom_sheet_opciones);
+
+        for (int i = 0; i < opciones.length; i++) {
+            final int index = i;
+            String opcion = opciones[i];
+
+            TextView tvOpcion = new TextView(requireContext());
+            tvOpcion.setText(opcion);
+            tvOpcion.setTextSize(18f);
+            tvOpcion.setPadding(60, 40, 60, 40);
+            tvOpcion.setClickable(true);
+
+            tvOpcion.setOnClickListener(v -> {
+                // MAGIA AQUÍ: Guardar en SharedPreferences antes de que la pantalla se reinicie
+                android.content.SharedPreferences prefs = requireActivity().getSharedPreferences("PreferenciasApp", android.content.Context.MODE_PRIVATE);
+                prefs.edit().putString("temaNombre", opcion).apply();
+
+                tvTema.setText(opcion);
+
+                if (index == 0) {
+                    androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO);
+                } else if (index == 1) {
+                    androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES);
+                } else {
+                    androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                }
+                dialog.dismiss();
+            });
+            llOpciones.addView(tvOpcion);
+        }
+        dialog.show();
     }
 
     /**
@@ -225,11 +308,11 @@ public class SettingFragment extends Fragment {
         if (usuarioId == -1L) return;
 
         String nuevoNombre = tvName.getText().toString();
-
         UsuarioUpdateRequest request = new UsuarioUpdateRequest();
         request.setNombre(nuevoNombre);
         request.setPais(paisSeleccionado);
         request.setIdioma(idiomaSeleccionado);
+        request.setMoneda(monedaSeleccionada);
 
         RetrofitClient.getApiService().actualizarPerfil(usuarioId, request)
                 .enqueue(new retrofit2.Callback<Map<String, Object>>() {
@@ -247,6 +330,44 @@ public class SettingFragment extends Fragment {
                         Toast.makeText(getContext(), "Fallo de conexión", Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+    /**
+     * Abre un Bottom Sheet moderno para seleccionar la moneda
+     */
+    private void mostrarBottomSheetMoneda() {
+        // 1. Crear el componente BottomSheet
+        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(requireContext());
+
+        // 2. Inflar el diseño que creamos en el paso anterior
+        View bottomSheetView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.layout_bottom_sheet_moneda, null);
+
+        bottomSheetDialog.setContentView(bottomSheetView);
+
+        // 3. Configurar los clics de cada opción dentro del Bottom Sheet
+        bottomSheetView.findViewById(R.id.opcion_eur).setOnClickListener(v -> {
+            actualizarMoneda("EUR", bottomSheetDialog);
+        });
+
+        bottomSheetView.findViewById(R.id.opcion_usd).setOnClickListener(v -> {
+            actualizarMoneda("USD", bottomSheetDialog);
+        });
+
+        bottomSheetView.findViewById(R.id.opcion_cop).setOnClickListener(v -> {
+            actualizarMoneda("COP", bottomSheetDialog);
+        });
+
+        // 4. Mostrarlo en pantalla
+        bottomSheetDialog.show();
+    }
+    /**
+     * Método auxiliar para evitar repetir código en los clics
+     */
+    private void actualizarMoneda(String codigoMoneda, BottomSheetDialog dialog) {
+        monedaSeleccionada = codigoMoneda;
+        tvMoneda.setText(codigoMoneda);
+        guardarCambiosEnBackend(); // Manda el cambio a Spring Boot
+        dialog.dismiss(); // Cierra el menú hacia abajo
     }
 
     /**

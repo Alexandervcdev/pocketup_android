@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/white_pu"
+    android:background="@android:color/transparent"
     android:orientation="vertical"
     android:padding="24dp">
 
@@ -12,14 +12,14 @@
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="16dp"
-        android:background="#D1D1D1" />
+        android:background="#E0E0E0" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
-        android:text="¿Qué deseas hacer?"
-        android:textColor="@color/black"
+        android:text="@string/que_deseas_hacer"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="20sp"
         android:textStyle="bold" />
 
@@ -29,9 +29,11 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_marginBottom="12dp"
-        android:text="Registrar Nuevo Ingreso"
+        android:text="@string/new_ingreso"
         android:textColor="@color/turquesa_oscuro"
-        app:icon="@android:drawable/ic_input_add"
+        app:icon="@drawable/ic_ingreso"
+        app:iconSize="26dp"
+        app:iconPadding="4dp"
         app:iconTint="@color/turquesa_oscuro"
         app:strokeColor="@color/turquesa_oscuro"
         app:cornerRadius="12dp" />
@@ -42,9 +44,11 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_marginBottom="24dp"
-        android:text="Registrar Nuevo Gasto"
+        android:text="@string/new_spent"
         android:textColor="@color/red"
-        app:icon="@android:drawable/ic_delete"
+        app:icon="@drawable/ic_spent"
+        app:iconSize="26dp"
+        app:iconPadding="4dp"
         app:iconTint="@color/red"
         app:strokeColor="@color/red"
         app:cornerRadius="12dp" />
@@ -53,26 +57,32 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginBottom="24dp"
-        android:background="#E0E0E0" /> <com.google.android.material.button.MaterialButton
-    android:id="@+id/btn_opcion_ver_ingresos"
-    style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
-    android:layout_width="match_parent"
-    android:layout_height="50dp"
-    android:text="Ver mi historial de Ingresos"
-    android:textColor="@color/blue"
-    app:icon="@android:drawable/ic_menu_recent_history"
-    app:iconTint="@color/blue"
-    android:gravity="start|center_vertical" />
+        android:background="?attr/colorOutlineVariant" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_opcion_ver_ingresos"
+        style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="@string/see_history"
+        android:textColor="@color/blue"
+        app:icon="@drawable/ic_history"
+        app:iconSize="26dp"
+        app:iconTint="@color/blue"
+        android:gravity="start|center_vertical"
+        android:textAlignment="viewStart" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_opcion_ver_gastos"
         style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:text="Ver mi historial de Gastos"
+        android:text="@string/see_history_movements"
         android:textColor="@color/blue"
-        app:icon="@android:drawable/ic_menu_recent_history"
+        app:icon="@drawable/ic_history"
+        app:iconSize="26dp"
         app:iconTint="@color/blue"
-        android:gravity="start|center_vertical" />
+        android:gravity="start|center_vertical"
+        android:textAlignment="viewStart" />
 
 </LinearLayout>

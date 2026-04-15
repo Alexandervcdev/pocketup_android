@@ -11,8 +11,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
-        android:text="Historial"
-        app:tabTextColor="@color/black_pu"
+        android:text="@string/history"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="28sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
@@ -23,20 +23,23 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
+        android:background="?attr/colorSurface"
         app:tabIndicatorColor="@color/turquesa_oscuro"
+        app:tabIndicatorHeight="3dp"
         app:tabSelectedTextColor="@color/turquesa_oscuro"
-        app:tabTextColor="@color/black_pu"
+        app:tabTextColor="?attr/colorOnSurfaceVariant"
+        app:tabRippleColor="@android:color/transparent"
         app:layout_constraintTop_toBottomOf="@id/tv_historial_title">
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Ingresos" />
+            android:text="@string/incomes" />
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Gastos" />
+            android:text="@string/spents" />
 
     </com.google.android.material.tabs.TabLayout>
 
@@ -47,6 +50,7 @@
         android:layout_marginTop="8dp"
         android:clipToPadding="false"
         android:paddingBottom="24dp"
+        android:overScrollMode="never"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tab_layout_movimientos" />
 
@@ -54,8 +58,8 @@
         android:id="@+id/tv_empty_state"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="No hay movimientos aquí aún 🤷‍♂️"
-        android:textColor="@color/black_pu"
+        android:text="No hay movimientos aquí aún ️"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:textSize="16sp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
