@@ -5,4 +5,5 @@
         <item name="android:fontFamily">@font/poppins</item>
         <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
     </style>
+    <color name="turquesa_dinamico">@color/turquesa_oscuro</color>
 </resources>

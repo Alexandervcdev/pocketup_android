@@ -12,7 +12,9 @@ import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
+import retrofit2.http.HTTP;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
@@ -31,7 +33,13 @@ public interface ApiService {
     Call<MovimientoResponse> registrarMovimiento(@Body MovimientoRequest request);
     @GET("movimientos/usuario/{id}")
     Call<List<MovimientoResponse>> obtenerMovimientos(@Path("id") Long usuarioId);
+    @DELETE("user/delete/{id}")
+    Call<Map<String, Object>> eliminarCuenta(@Path("id") Long id);
 
     @PUT("{id}/perfil")
     Call<Map<String, Object>> actualizarPerfil(@Path("id") Long id, @Body UsuarioUpdateRequest request);
+    // NUEVO MÉTODO PARA BORRADO MÚLTIPLE (BATCH DELETE)
+    // Usamos @HTTP en lugar de @DELETE para poder enviar un @Body con la lista de IDs
+    @HTTP(method = "DELETE", path = "movimientos/movements/delete", hasBody = true)
+    Call<Map<String, Object>> deleteMovements(@Body List<Long> ids);
 }

@@ -7,4 +7,5 @@
     </style>
 
     <style name="Theme.PocketupDM" parent="Base.Theme.PocketupDM" />
+    <color name="turquesa_dinamico">@color/turquesa</color>
 </resources>

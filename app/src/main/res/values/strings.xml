@@ -48,4 +48,9 @@
     <string name="history">Historial</string>
     <string name="incomes">Ingresos</string>
     <string name="spents">Gastos</string>
+    <string name="new_movement">Registrar Movimiento</string>
+    <string name="example_import">Importe (Ej: 50.00)</string>
+    <string name="date">Fecha</string>
+    <string name="note_optional">Nota (Opcional)</string>
+    <string name="save_movement">Guardar Movimiento</string>
 </resources>

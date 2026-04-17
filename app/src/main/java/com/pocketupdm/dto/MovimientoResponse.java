@@ -12,6 +12,7 @@ public class MovimientoResponse {
     private MovementType tipo;
     private String nota;
     private Long usuarioId;
+    private boolean isSelected = false; // Solo para la lógica de la UI
 
     public Long getId() {
         return id;
@@ -35,5 +36,13 @@ public class MovimientoResponse {
 
     public Long getUsuarioId() {
         return usuarioId;
+    }
+
+    public boolean isSelected() {
+        return isSelected;
+    }
+
+    public void setSelected(boolean selected) {
+        isSelected = selected;
     }
 }

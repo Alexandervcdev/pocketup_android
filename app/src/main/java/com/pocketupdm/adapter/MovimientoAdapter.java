@@ -2,6 +2,7 @@ package com.pocketupdm.adapter;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.datepicker.OnSelectionChangedListener;
 import com.pocketupdm.R;
 import com.pocketupdm.dto.MovimientoResponse;
 import com.pocketupdm.model.MovementType;
@@ -24,12 +26,17 @@ public class MovimientoAdapter extends RecyclerView.Adapter<MovimientoAdapter.Mo
 
     private Context context;
     private List<MovimientoResponse> movimientosList;
-
+    private boolean isSelectionMode = false; // ¿Estamos borrando cosas?
+    private OnSelectionChangeListener selectionListener;
+    public interface OnSelectionChangeListener {
+        void onSelectionChanged(int count);
+    }
     // Constructor
-    public MovimientoAdapter(Context context, List<MovimientoResponse> movimientosList) {
+    public MovimientoAdapter(Context context, List<MovimientoResponse> movimientosList, OnSelectionChangeListener listener) {
         this.context = context;
         // Si la lista es null, inicializamos una vacía para evitar crasheos
         this.movimientosList = movimientosList != null ? movimientosList : new ArrayList<>();
+        this.selectionListener = listener;
     }
 
     // Método para actualizar la lista (útil para cuando descarguemos los datos de la API)
@@ -74,6 +81,58 @@ public class MovimientoAdapter extends RecyclerView.Adapter<MovimientoAdapter.Mo
             holder.ivIcono.setImageResource(android.R.drawable.arrow_down_float);
             holder.ivIcono.setColorFilter(ContextCompat.getColor(context, R.color.red));
         }
+
+        // LÓGICA VISUAL DE SELECCIÓN
+        // Si está seleccionado, pintamos un fondo sutil (ej: turquesa clarito o gris)
+        if (movimiento.isSelected()) {
+            holder.itemView.setBackgroundColor(Color.parseColor("#1A8FE3CF")); // Turquesa con mucha transparencia
+        } else {
+            holder.itemView.setBackgroundColor(Color.TRANSPARENT);
+        }
+        // CLIC LARGO: Activa el modo selección
+        holder.itemView.setOnLongClickListener(v -> {
+            if (!isSelectionMode) {
+                isSelectionMode = true;
+                toggleSelection(position);
+            }
+            return true;
+        });
+
+        // CLIC NORMAL: Si estamos en modo selección, marca/desmarca. Si no, no hace nada (por ahora).
+        holder.itemView.setOnClickListener(v -> {
+            if (isSelectionMode) {
+                toggleSelection(position);
+            }
+        });
+    }
+    private void toggleSelection(int position) {
+        movimientosList.get(position).setSelected(!movimientosList.get(position).isSelected());
+        notifyItemChanged(position);
+
+        // Contamos cuántos hay seleccionados
+        int count = getSelectedCount();
+        if (count == 0) isSelectionMode = false; // Si desmarcamos todo, salimos del modo
+        if (selectionListener != null) selectionListener.onSelectionChanged(count);
+    }
+    public int getSelectedCount() {
+        int count = 0;
+        for (MovimientoResponse m : movimientosList) {
+            if (m.isSelected()) count++;
+        }
+        return count;
+    }
+    public List<Long> getSelectedIds() {
+        List<Long> ids = new ArrayList<>();
+        for (MovimientoResponse m : movimientosList) {
+            if (m.isSelected()) ids.add(m.getId());
+        }
+        return ids;
+    }
+
+    public void exitSelectionMode() {
+        isSelectionMode = false;
+        for (MovimientoResponse m : movimientosList) m.setSelected(false);
+        notifyDataSetChanged();
     }
 
     @Override

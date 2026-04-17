@@ -4,14 +4,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/white_pu"
+    android:background="@android:color/transparent"
     android:padding="24dp">
 
     <View
         android:id="@+id/view_drag_handle"
         android:layout_width="40dp"
         android:layout_height="4dp"
-        android:background="#D1D1D1"
+        android:background="#E0E0E0"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -21,8 +21,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Registrar Movimiento"
-        android:textColor="@color/black"
+        android:text="@string/new_movement"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="22sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
@@ -34,7 +34,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:hint="Importe (Ej: 50.00)"
+        android:hint="@string/example_import"
         app:layout_constraintTop_toBottomOf="@id/tv_titulo_sheet">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -51,7 +51,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="Fecha"
+        android:hint="@string/date"
         app:startIconDrawable="@android:drawable/ic_menu_my_calendar"
         app:layout_constraintTop_toBottomOf="@id/til_importe">
 
@@ -70,7 +70,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="Nota (Opcional)"
+        android:hint="@string/note_optional"
         app:layout_constraintTop_toBottomOf="@id/til_fecha">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -85,7 +85,7 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_marginTop="32dp"
-        android:text="Guardar Movimiento"
+        android:text="@string/save_movement"
         android:textColor="@color/white"
         android:textSize="16sp"
         app:cornerRadius="12dp"

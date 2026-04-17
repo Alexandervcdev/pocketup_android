@@ -3,6 +3,7 @@ package com.pocketupdm.fragment;
 import static android.content.Context.MODE_PRIVATE;
 
 import android.app.Dialog;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -433,8 +434,75 @@ public class SettingFragment extends Fragment {
     }
 
     private void ejecutarEliminarCuenta() {
-        // Aquí conectaremos la llamada a Retrofit para borrar el usuario de Spring Boot más adelante
-        Toast.makeText(requireContext(), "Procesando eliminación de cuenta...", Toast.LENGTH_SHORT).show();
+        SessionManager sessionManager = new SessionManager(requireContext());
+        Long usuarioId = sessionManager.getUsuarioId();
+        if (usuarioId == -1L) return;
+        // 1. Llamada al Backend
+        RetrofitClient.getApiService().eliminarCuenta(usuarioId).enqueue(new retrofit2.Callback<Map<String, Object>>() {
+            @Override
+            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                if (response.isSuccessful()) {
+                    // 2. Si el backend borró con éxito, limpiamos rastro local
+                    eliminarRastroYSalir();
+                    Toast.makeText(requireContext(), "Tu cuenta ha sido eliminada. Lamentamos verte partir.", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(requireContext(), "Error al eliminar la cuenta", Toast.LENGTH_SHORT).show();
+                }
+            }
+            @Override
+            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                Toast.makeText(requireContext(), "Fallo de conexión", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    private void eliminarRastroYSalir() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            // 1. Intentamos borrar al usuario de Firebase Auth
+            user.delete().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    Log.d("DeleteAccount", "Usuario eliminado de Firebase.");
+                } else {
+                    // Si falla (ej: requiere login reciente), al menos cerramos sesión
+                    Log.e("DeleteAccount", "No se pudo borrar de Firebase, haciendo SignOut.");
+                    FirebaseAuth.getInstance().signOut();
+                }
+                // 2. Independientemente del resultado de Firebase, limpiamos lo local
+                completarLimpiezaYRedirigir();
+            });
+        } else {
+            // Si por alguna razón no hay usuario en Firebase, limpiamos lo demás
+            completarLimpiezaYRedirigir();
+        }
+    }
+
+
+    /**
+     * Limpia SharedPreferences, Firebase y redirige al Login
+     */
+    private void completarLimpiezaYRedirigir() {
+        // Limpiar SharedPreferences (SessionManager)
+        // 1. Limpiar el archivo de sesión (ID, Nombre, etc.)
+        SessionManager sessionManager = new SessionManager(requireContext());
+        sessionManager.cerrarSesion();
+
+        //Limpiar el archivo específico del Login
+        SharedPreferences loginPrefs = requireContext().getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE);
+        loginPrefs.edit().clear().apply();
+
+        // Limpiar el estado de las credenciales de Google
+        CredentialManager credentialManager = CredentialManager.create(requireContext());
+        credentialManager.clearCredentialStateAsync(new ClearCredentialStateRequest(), null,
+                ContextCompat.getMainExecutor(requireContext()), new CredentialManagerCallback<Void, ClearCredentialException>() {
+                    @Override
+                    public void onResult(Void result) {
+                        redirigirAlLogin();
+                    }
+                    @Override
+                    public void onError(@NonNull ClearCredentialException e) {
+                        redirigirAlLogin();
+                    }
+                });
     }
 
     private void redirigirAlLogin() {
