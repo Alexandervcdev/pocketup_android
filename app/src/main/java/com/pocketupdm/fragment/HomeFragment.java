@@ -182,21 +182,20 @@ public class HomeFragment extends Fragment {
     }
 
     private void abrirBottomSheetMovimiento(MovementType tipo) {
-        MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(tipo, (importe, nota, tipoMovimiento, fecha) ->
-                enviarMovimientoAlBackend(importe, nota, tipoMovimiento, fecha)
+        MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(tipo, (importe, nota, tipoMovimiento, fecha, categoriaId) ->
+                enviarMovimientoAlBackend(importe, nota, tipoMovimiento, fecha, categoriaId) // Pasamos el nuevo parámetro
         );
         bottomSheet.show(getParentFragmentManager(), "MovimientoBottomSheet");
     }
 
-    private void enviarMovimientoAlBackend(BigDecimal importe, String nota, MovementType tipo, String fecha) {
+    private void enviarMovimientoAlBackend(BigDecimal importe, String nota, MovementType tipo, String fecha,Long categoriaId) {
         Long usuarioId = sessionManager.getUsuarioId();
         if (usuarioId == -1L) {
             Toast.makeText(getContext(), "Error: Sesión no válida", Toast.LENGTH_SHORT).show();
             com.pocketupdm.utils.NavigationUtil.irALogin(getActivity());
             return;
         }
-
-        MovimientoRequest request = new MovimientoRequest(importe, fecha, tipo, nota, usuarioId);
+        MovimientoRequest request = new MovimientoRequest(importe, fecha, tipo, nota, usuarioId,categoriaId);
 
         RetrofitClient.getApiService().registrarMovimiento(request).enqueue(new Callback<MovimientoResponse>() {
             @Override

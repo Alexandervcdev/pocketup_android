@@ -11,6 +11,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.pocketupdm.utils.SessionManager;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -67,6 +68,15 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //autologin
+        SessionManager sessionManager = new SessionManager(this);
+        if (sessionManager.getUsuarioId() != -1L) {
+            // salto al menu principal
+            com.pocketupdm.utils.NavigationUtil.irAMainActivity(this);
+            Intent intent = new Intent(this, MainActivity.class);
+            return;
+        }
+
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_login);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {

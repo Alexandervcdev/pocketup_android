@@ -41,8 +41,8 @@
     <string name="cop_symbol">COP</string>
     <string name="manage_money">Gestionar Dinero</string>
     <string name="que_deseas_hacer">¿Qué deseas hacer?</string>
-    <string name="new_ingreso">Registrar Nuevo Ingreso</string>
-    <string name="new_spent">Registrar Nuevo Gasto</string>
+    <string name="new_ingreso">Nuevo Ingreso</string>
+    <string name="new_spent">Nuevo Gasto</string>
     <string name="see_history">Ver historial de Ingresos</string>
     <string name="see_history_movements">Ver historial de Gastos</string>
     <string name="history">Historial</string>

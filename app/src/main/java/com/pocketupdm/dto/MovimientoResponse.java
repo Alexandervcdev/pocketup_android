@@ -1,5 +1,6 @@
 package com.pocketupdm.dto;
 
+import com.pocketupdm.model.Categoria;
 import com.pocketupdm.model.MovementType;
 
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ public class MovimientoResponse {
     private MovementType tipo;
     private String nota;
     private Long usuarioId;
+    private Categoria categoria;
     private boolean isSelected = false; // Solo para la lógica de la UI
 
     public Long getId() {
@@ -45,4 +47,7 @@ public class MovimientoResponse {
     public void setSelected(boolean selected) {
         isSelected = selected;
     }
+
+    public Categoria getCategoria() { return categoria; }
+    public void setCategoria(Categoria categoria) { this.categoria = categoria; }
 }

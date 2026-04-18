@@ -26,13 +26,37 @@ import androidx.navigation.ui.NavigationUI;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.pocketupdm.dialogs.MovimientoBottomSheet;
+import com.pocketupdm.dto.MovimientoRequest;
+import com.pocketupdm.dto.MovimientoResponse;
 import com.pocketupdm.model.MovementType;
+import com.pocketupdm.network.RetrofitClient;
+import com.pocketupdm.utils.SessionManager;
+
+import java.math.BigDecimal;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
 
+    private SessionManager sessionManager;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        sessionManager = new SessionManager(this);
+
+        if (sessionManager.getUsuarioId() == -1L) {
+            // Si alguien intenta entrar aquí (ej. por notificación) y NO hay sesión activa...
+            Toast.makeText(this, "Tu sesión ha expirado. Vuelve a iniciar sesión.", Toast.LENGTH_LONG).show();
+            // Lo mandamos al Login de una patada (y cerramos la notificación)
+            NotificationManagerCompat.from(this).cancel(999);
+            Intent intent = new Intent(this, LoginActivity.class);
+            startActivity(intent);
+            finish();
+            return; // Detenemos el MainActivity
+        }
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
@@ -96,15 +120,41 @@ public class MainActivity extends AppCompatActivity {
 
             MovementType tipo = accion.equals("INGRESO") ? MovementType.INGRESO : MovementType.GASTO;
 
-            // Abrimos el formulario de registro rápido
-            MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(tipo, (importe, nota, tipoMovimiento, fecha) -> {
-                // Aquí temporalmente ponemos un Toast.
-                // Luego decidiremos cómo mandarlo a la base de datos desde aquí.
-                Toast.makeText(this, "Deberíamos guardar un " + tipoMovimiento.name() + " de " + importe + "€", Toast.LENGTH_SHORT).show();
+            // 1. Abrimos el formulario de registro rápido
+            // IMPORTANTE: Ahora incluimos 'categoriaId' en el lambda (5 parámetros)
+            MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(tipo, (importe, nota, tipoMovimiento, fecha, categoriaId) -> {
+
+                // 2. Ya no ponemos solo un Toast, ¡enviamos los datos de verdad!
+                enviarMovimientoAlBackend(importe, nota, tipoMovimiento, fecha, categoriaId);
+
             });
 
             bottomSheet.show(getSupportFragmentManager(), "MovimientoBottomSheetRapido");
         }
+    }
+
+    private void enviarMovimientoAlBackend(BigDecimal importe, String nota, MovementType tipo, String fecha, Long categoriaId) {
+        // 3. AHORA SÍ RECONOCE EL sessionManager
+        Long usuarioId = sessionManager.getUsuarioId();
+        if (usuarioId == -1L) return;
+
+        // Creamos el request con el nuevo categoriaId
+        MovimientoRequest request = new MovimientoRequest(importe, fecha, tipo, nota, usuarioId, categoriaId);
+
+        RetrofitClient.getApiService().registrarMovimiento(request).enqueue(new Callback<MovimientoResponse>() {
+            @Override
+            public void onResponse(Call<MovimientoResponse> call, Response<MovimientoResponse> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(MainActivity.this, "¡Movimiento guardado desde el acceso rápido!", Toast.LENGTH_SHORT).show();
+                    // Opcional: Si tienes el Home abierto debajo, podrías recargar los datos
+                }
+            }
+
+            @Override
+            public void onFailure(Call<MovimientoResponse> call, Throwable t) {
+                Toast.makeText(MainActivity.this, "Error de conexión", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void mostrarNotificacionPersistente() {

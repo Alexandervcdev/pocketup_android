@@ -5,6 +5,7 @@ import com.pocketupdm.dto.UsuarioLoginRequest;
 import com.pocketupdm.dto.UsuarioRegistroRequest;
 import com.pocketupdm.dto.UsuarioResponse;
 import com.pocketupdm.dto.UsuarioUpdateRequest;
+import com.pocketupdm.model.Categoria;
 import com.pocketupdm.model.Usuario;
 
 import java.util.List;
@@ -42,4 +43,17 @@ public interface ApiService {
     // Usamos @HTTP en lugar de @DELETE para poder enviar un @Body con la lista de IDs
     @HTTP(method = "DELETE", path = "movimientos/movements/delete", hasBody = true)
     Call<Map<String, Object>> deleteMovements(@Body List<Long> ids);
+
+    // 1. Obtener todas las categorías (Las del sistema + las del usuario)
+    @GET("categorias/get/{usuarioId}")
+    Call<List<Categoria>> obtenerCategorias(@Path("usuarioId") Long usuarioId);
+    // 2. Crear una nueva categoría personalizada
+    @POST("categorias/new")
+    Call<Categoria> crearCategoria(@Body Categoria categoria);
+    // 3. Editar una categoría existente
+    @PUT("categorias/update/{id}")
+    Call<Categoria> actualizarCategoria(@Path("id") Long id, @Body Categoria categoria);
+    // 4. Eliminar una categoría (Recuerda que el backend reasignará los movimientos)
+    @DELETE("categorias/delete/{id}")
+    Call<Void> eliminarCategoria(@Path("id") Long id);
 }

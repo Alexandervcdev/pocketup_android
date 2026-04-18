@@ -4,8 +4,11 @@
         <!-- Customize your light theme here. -->
         <item name="android:fontFamily">@font/poppins</item>
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorSecondaryContainer">@color/turquesa_oscuro</item>
+
     </style>
 
     <style name="Theme.PocketupDM" parent="Base.Theme.PocketupDM" />
     <color name="turquesa_dinamico">@color/turquesa</color>
+    <color name="color_nav_indicador">@color/turquesa_oscuro</color>
 </resources>

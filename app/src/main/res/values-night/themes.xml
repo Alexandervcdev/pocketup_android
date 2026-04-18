@@ -3,7 +3,11 @@
     <style name="Base.Theme.PocketupDM" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
         <item name="android:fontFamily">@font/poppins</item>
+        <item name="colorSecondaryContainer">@color/turquesa</item>
+
         <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
     </style>
     <color name="turquesa_dinamico">@color/turquesa_oscuro</color>
+    <color name="color_nav_indicador">@color/turquesa</color>
+
 </resources>

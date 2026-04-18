@@ -11,19 +11,30 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.textfield.TextInputEditText;
 import com.pocketupdm.R;
+import com.pocketupdm.adapter.CategoriaAdapter;
+import com.pocketupdm.model.Categoria;
 import com.pocketupdm.model.MovementType;
+import com.pocketupdm.network.RetrofitClient;
+import com.pocketupdm.utils.SessionManager;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MovimientoBottomSheet extends BottomSheetDialogFragment {
 
@@ -31,9 +42,15 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
     private OnMovimientoGuardadoListener listener;
     private String fechaSeleccionada; // Formato YYYY-MM-DD para la API
 
+    // NUEVAS VARIABLES PARA CATEGORÍAS
+    private RecyclerView rvCategorias;
+    private CategoriaAdapter categoriaAdapter;
+    private Long categoriaSeleccionadaId = null;
+    private SessionManager sessionManager;
+
     // Interfaz para avisarle al HomeFragment que se guardó un dato
     public interface OnMovimientoGuardadoListener {
-        void onGuardar(BigDecimal importe, String nota, MovementType tipo,String fecha);
+        void onGuardar(BigDecimal importe, String nota, MovementType tipo,String fecha,Long categoriaId);
     }
 
     // Constructor para pasarle el tipo (INGRESO o GASTO) y el listener
@@ -51,6 +68,13 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        sessionManager = new SessionManager(requireContext());
+        rvCategorias = view.findViewById(R.id.rv_categorias_selector);
+        rvCategorias.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+
+        // 2. Traer las categorías del servidor
+        cargarCategoriasDesdeBackend();
 
         TextView tvTitulo = view.findViewById(R.id.tv_titulo_sheet);
         TextInputEditText etImporte = view.findViewById(R.id.et_importe);
@@ -120,13 +144,43 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
                     notaStr = "Sin nota";
                 }
 
+                // NUEVA VALIDACIÓN: Obligar a elegir categoría
+                if (categoriaSeleccionadaId == null) {
+                    Toast.makeText(getContext(), "Por favor, selecciona una categoría", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
                 // Si sobrevive a todas las validaciones, lo enviamos
-                listener.onGuardar(importe, notaStr, tipo, fechaSeleccionada);
+                listener.onGuardar(importe, notaStr, tipo, fechaSeleccionada,categoriaSeleccionadaId);
                 dismiss();
 
             } catch (NumberFormatException e) {
                 // Si el usuario metió caracteres extraños ("50..5")
                 etImporte.setError("Formato de número inválido");
+            }
+        });
+    }
+    private void cargarCategoriasDesdeBackend() {
+        Long usuarioId = sessionManager.getUsuarioId();
+
+        RetrofitClient.getApiService().obtenerCategorias(usuarioId).enqueue(new Callback<List<Categoria>>() {
+            @Override
+            public void onResponse(Call<List<Categoria>> call, Response<List<Categoria>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Categoria> categorias = response.body();
+
+                    // Configuramos el Adapter y le pasamos la lista
+                    categoriaAdapter = new CategoriaAdapter(getContext(), categorias, categoria -> {
+                        // Cuando el usuario toca una bolita, guardamos su ID
+                        categoriaSeleccionadaId = categoria.getId();
+                    });
+                    rvCategorias.setAdapter(categoriaAdapter);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Categoria>> call, Throwable t) {
+                Toast.makeText(getContext(), "Error al cargar categorías", Toast.LENGTH_SHORT).show();
             }
         });
     }
