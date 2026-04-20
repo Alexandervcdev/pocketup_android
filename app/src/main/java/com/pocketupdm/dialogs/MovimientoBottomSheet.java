@@ -76,6 +76,21 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
         // 2. Traer las categorías del servidor
         cargarCategoriasDesdeBackend();
 
+        MaterialButton btnNuevaCategoria = view.findViewById(R.id.btn_nueva_categoria);
+        btnNuevaCategoria.setOnClickListener(v -> {
+            // Instanciamos el nuevo BottomSheet
+            NuevaCategoriaBottomSheet bottomSheet = new NuevaCategoriaBottomSheet();
+
+            // Le ponemos el audífono al BottomSheet
+            bottomSheet.setListener(() -> {
+                // Cuando escuchemos que ha terminado, recargamos las categorías
+                cargarCategoriasDesdeBackend();
+            });
+
+            // Lo mostramos en pantalla
+            bottomSheet.show(getParentFragmentManager(), "NuevaCategoria");
+        });
+
         TextView tvTitulo = view.findViewById(R.id.tv_titulo_sheet);
         TextInputEditText etImporte = view.findViewById(R.id.et_importe);
         TextInputEditText etFecha = view.findViewById(R.id.et_fecha);

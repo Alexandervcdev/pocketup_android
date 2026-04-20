@@ -7,6 +7,7 @@ public class Categoria implements Serializable {
     private String nombre;
     private String icono; // Aquí vendrá "ic_restaurant", "ic_car", etc.
     private String color; // Aquí vendrá el Hex "#FF7043"
+    private Usuario usuario;
 
     public Categoria() {}
 
@@ -21,4 +22,7 @@ public class Categoria implements Serializable {
 
     public String getColor() { return color; }
     public void setColor(String color) { this.color = color; }
+
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
 }
