@@ -124,6 +124,9 @@ public class SettingFragment extends Fragment {
                 .enqueue(new Callback<UsuarioResponse>() {
                     @Override
                     public void onResponse(Call<UsuarioResponse> call, Response<UsuarioResponse> response) {
+                        // Ignora la respuesta si el usuario no se encuentra en la vista
+                        if (!isAdded() || getContext() == null) return;
+
                         if (response.isSuccessful() && response.body() != null) {
                             UsuarioResponse user = response.body();
 
@@ -306,6 +309,7 @@ public class SettingFragment extends Fragment {
                 .enqueue(new retrofit2.Callback<Map<String, Object>>() {
                     @Override
                     public void onResponse(retrofit2.Call<Map<String, Object>> call, retrofit2.Response<java.util.Map<String, Object>> response) {
+                        if (!isAdded() || getContext() == null) return;
                         if (response.isSuccessful()) {
                             Toast.makeText(getContext(), "Perfil actualizado", Toast.LENGTH_SHORT).show();
                             sessionManager.crearSesion(usuarioId, nuevoNombre);
@@ -392,6 +396,7 @@ public class SettingFragment extends Fragment {
         RetrofitClient.getApiService().eliminarCuenta(usuarioId).enqueue(new retrofit2.Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                if (!isAdded() || getContext() == null) return;
                 if (response.isSuccessful()) {
                     // 2. Si el backend borró con éxito, limpiamos rastro local
                     eliminarRastroYSalir();
@@ -402,7 +407,8 @@ public class SettingFragment extends Fragment {
             }
             @Override
             public void onFailure(Call<Map<String, Object>> call, Throwable t) {
-                Toast.makeText(requireContext(), "Fallo de conexión", Toast.LENGTH_SHORT).show();
+                if (!isAdded() || getContext() == null) return; // ESCUDO
+                Toast.makeText(getContext(), "Fallo de conexión", Toast.LENGTH_SHORT).show();
             }
         });
     }
