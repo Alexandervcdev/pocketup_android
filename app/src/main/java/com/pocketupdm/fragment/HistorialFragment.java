@@ -63,7 +63,6 @@ public class HistorialFragment extends Fragment {
         recyclerView = view.findViewById(R.id.rv_movimientos);
         tabLayout = view.findViewById(R.id.tab_layout_movimientos);
         tvEmptyState = view.findViewById(R.id.tv_empty_state);
-        // ¡Adiós ivDeleteBatch!
 
         // 2. Lógica de Pestañas (Arguments)
         if (getArguments() != null) {

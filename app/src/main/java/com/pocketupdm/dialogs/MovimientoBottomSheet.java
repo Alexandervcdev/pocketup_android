@@ -49,6 +49,9 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
     private Long categoriaSeleccionadaId = null;
     private SessionManager sessionManager;
 
+    private boolean isModoEdicionCategorias = false;
+    private MaterialButton btnEditarToggle;
+
     // Interfaz para avisarle al HomeFragment que se guardó un dato
     public interface OnMovimientoGuardadoListener {
         void onGuardar(BigDecimal importe, String nota, MovementType tipo,String fecha,Long categoriaId);
@@ -73,7 +76,26 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
         sessionManager = new SessionManager(requireContext());
         rvCategorias = view.findViewById(R.id.rv_categorias_selector);
         rvCategorias.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+        btnEditarToggle = view.findViewById(R.id.btn_editar_categorias_toggle);
 
+        // NUEVA LÓGICA DEL BOTÓN EDITAR
+        btnEditarToggle.setOnClickListener(v -> {
+            isModoEdicionCategorias = !isModoEdicionCategorias; // Cambiamos el estado
+
+            if (isModoEdicionCategorias) {
+                // MODO EDICIÓN ON
+                btnEditarToggle.setText("Cancelar");
+                btnEditarToggle.setIconTint(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.red)));
+                btnEditarToggle.setTextColor(ContextCompat.getColor(requireContext(), R.color.red));
+                Toast.makeText(getContext(), "Toca una categoría para ver opciones", Toast.LENGTH_SHORT).show();
+            } else {
+                // MODO EDICIÓN OFF
+                btnEditarToggle.setText("Editar");
+                // Asegúrate de que el color gris sea el que usas por defecto en tu tema
+                btnEditarToggle.setIconTint(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), android.R.color.darker_gray)));
+                btnEditarToggle.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.darker_gray));
+            }
+        });
         // 2. Traer las categorías del servidor
         cargarCategoriasDesdeBackend();
 
@@ -186,37 +208,39 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
                 if (response.isSuccessful() && response.body() != null) {
                     List<Categoria> categorias = response.body();
 
-                    // Instanciamos el adaptador con LOS DOS listeners
-                    categoriaAdapter = new CategoriaAdapter(getContext(), categorias,
-                            // 1. Acción de Click Normal (Seleccionar)
-                            categoria -> {
-                                categoriaSeleccionadaId = categoria.getId();
-                            },
-                                // 2. CLICK LARGO: Menú de opciones
-                            categoria -> {
-                                android.util.Log.d("DEBUG_POCKET", "Categoría: " + categoria.getNombre() + " | ID Usuario: " + categoria.getUsuarioId());
-                                // SEGURIDAD: Si es una categoría del sistema (usuario == null), no dejamos tocarla
-                                if (categoria.getUsuarioId() == null) {
-                                    Toast.makeText(getContext(), "Las categorías del sistema no se pueden modificar", Toast.LENGTH_SHORT).show();
-                                    return;
-                                }
+                    // ¡NUEVO ADAPTADOR CON UN SOLO LISTENER!
+                    categoriaAdapter = new CategoriaAdapter(getContext(), categorias, categoria -> {
 
-                                // Definimos las opciones
-                                String[] opciones = {"Editar", "Eliminar"};
+                        // ¿CÓMO REACCIONAMOS AL CLIC? Depende del "Interruptor"
+                        if (isModoEdicionCategorias) {
 
-                                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                                        .setTitle(categoria.getNombre()) // El título es el nombre de la categoría
-                                        .setItems(opciones, (dialog, which) -> {
-                                            if (which == 0) {
-                                                // OPCIÓN: EDITAR (RF 5.3)
-                                                abrirEditorCategoria(categoria);
-                                            } else if (which == 1) {
-                                                // OPCIÓN: ELIMINAR (RF 5.4)
-                                                confirmarEliminacion(categoria);
-                                            }
-                                        })
-                                        .show();
-                            });
+                            // === MODO EDICIÓN ACTIVADO ===
+                            if (categoria.getUsuarioId() == null) {
+                                Toast.makeText(getContext(), "Las categorías del sistema no se pueden modificar", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+
+                            // Mostramos las opciones igual que antes
+                            String[] opciones = {"Editar", "Eliminar"};
+                            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                                    .setTitle(categoria.getNombre())
+                                    .setItems(opciones, (dialog, which) -> {
+                                        if (which == 0) {
+                                            abrirEditorCategoria(categoria);
+                                        } else if (which == 1) {
+                                            confirmarEliminacion(categoria);
+                                        }
+
+                                        // Opcional: Apagar el modo edición después de elegir una acción
+                                        btnEditarToggle.performClick();
+                                    })
+                                    .show();
+                        } else {
+                            // === MODO NORMAL (Seleccionar para el movimiento) ===
+                            categoriaSeleccionadaId = categoria.getId();
+                        }
+                    });
+
                     rvCategorias.setAdapter(categoriaAdapter);
                 }
             }

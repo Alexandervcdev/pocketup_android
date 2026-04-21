@@ -96,9 +96,14 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
             params.setMargins(8, 0, 16, 0);
             colorView.setLayoutParams(params);
 
-            // Un fondo circular simple
-            colorView.setBackgroundResource(R.drawable.circle_background); // Necesitarás este archivo XML
+            colorView.setBackgroundResource(R.drawable.circle_background);
             colorView.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(hexColor)));
+
+            // ¡NUEVO!: Pre-seleccionar visualmente si estamos editando
+            if (hexColor.equals(colorSeleccionado)) {
+                colorView.setAlpha(0.5f); // Lo marcamos como seleccionado
+                vistaColorSeleccionada = colorView;
+            }
 
             colorView.setOnClickListener(v -> {
                 if (vistaColorSeleccionada != null) {
@@ -114,6 +119,7 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
     }
 
     // Generar iconos seleccionables ---
+    // Generar iconos seleccionables ---
     private void generarPaletaIconos() {
         for (String nombreIcono : PALETA_ICONOS) {
             ImageView iconView = new ImageView(getContext());
@@ -125,13 +131,20 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
             int resId = getResources().getIdentifier(nombreIcono, "drawable", requireContext().getPackageName());
             if (resId != 0) {
                 iconView.setImageResource(resId);
-                iconView.setColorFilter(Color.GRAY);
-                iconView.setBackgroundResource(R.drawable.circle_background); // Mismo fondo circular
+                iconView.setBackgroundResource(R.drawable.circle_background);
                 iconView.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#EEEEEE")));
+
+                // ¡NUEVO!: Pre-seleccionar visualmente si estamos editando
+                if (nombreIcono.equals(iconoSeleccionado)) {
+                    iconView.setColorFilter(Color.BLACK); // Lo marcamos oscuro
+                    vistaIconoSeleccionada = iconView;
+                } else {
+                    iconView.setColorFilter(Color.GRAY); // Los demás quedan grises
+                }
 
                 iconView.setOnClickListener(v -> {
                     if (vistaIconoSeleccionada != null) {
-                        ((ImageView) vistaIconoSeleccionada).setColorFilter(Color.GRAY);
+                        ((ImageView) vistaIconoSeleccionada).setColorFilter(Color.GRAY); // Desmarca el anterior
                     }
                     iconView.setColorFilter(Color.BLACK); // Resalta el icono seleccionado
                     vistaIconoSeleccionada = iconView;
@@ -169,9 +182,10 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
         categoriaDatos.setColor(colorSeleccionado);
         categoriaDatos.setIcono(iconoSeleccionado);
 
-        Usuario usuario = new Usuario();
-        usuario.setId(sessionManager.getUsuarioId());
-        categoriaDatos.setUsuario(usuario);
+        Long idReal = sessionManager.getUsuarioId();
+        if (idReal != -1L) {
+            categoriaDatos.setUsuarioId(idReal); // ¡Perfecto! Enviamos el ID plano directamente
+        }
 
         btnGuardar.setEnabled(false);
         btnGuardar.setText(categoriaAEditar != null ? "Actualizando..." : "Guardando...");
@@ -190,10 +204,13 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
             mensajeExito = "Categoría creada con éxito";
         }
 
-        // 4. Ejecutamos la llamada (la lógica de respuesta es la misma)
+        // 4. Ejecutamos la llamada
         call.enqueue(new Callback<Categoria>() {
             @Override
             public void onResponse(Call<Categoria> call, Response<Categoria> response) {
+                // ¡ESCUDO PROTECTOR VITAL AQUÍ!
+                if (!isAdded() || getContext() == null) return;
+
                 if (response.isSuccessful()) {
                     Toast.makeText(getContext(), mensajeExito, Toast.LENGTH_SHORT).show();
 
@@ -209,11 +226,15 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
 
             @Override
             public void onFailure(Call<Categoria> call, Throwable t) {
+                // ¡ESCUDO PROTECTOR VITAL AQUÍ!
+                if (!isAdded() || getContext() == null) return;
+
                 reestablecerBoton();
                 Toast.makeText(getContext(), "Error de red", Toast.LENGTH_SHORT).show();
             }
         });
     }
+
     private void reestablecerBoton() {
         btnGuardar.setEnabled(true);
         btnGuardar.setText(categoriaAEditar != null ? "Actualizar" : "Crear Categoría");

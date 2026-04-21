@@ -9,7 +9,7 @@
     <item
         android:id="@+id/nav_graphic"
         android:icon="@drawable/ic_chart"
-        android:title="@string/grafics" />
+        android:title="@string/planifica" />
     <item
         android:id="@+id/nav_character"
         android:icon="@drawable/ic_person"

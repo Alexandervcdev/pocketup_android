@@ -1,4 +1,5 @@
 package com.pocketupdm.adapter;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Color;
@@ -21,30 +22,24 @@ public class CategoriaAdapter extends RecyclerView.Adapter<CategoriaAdapter.Cate
 
     private final Context context;
     private List<Categoria> listaCategorias;
-    private final OnCategoriaClickListener listener;
-    private OnCategoriaLongClickListener longClickListener; // ¡NUEVO AVISADOR PARA BORRAR!
 
-    // Aquí guardamos la posición de la categoría que el usuario ha tocado
+    // Solo necesitamos UN listener ahora
+    private final OnCategoriaClickListener listener;
+
     private int posicionSeleccionada = -1;
 
-    // Interfaz para avisar al BottomSheet cuando toquen una categoría
+    // Interfaz única para avisar al BottomSheet
     public interface OnCategoriaClickListener {
         void onCategoriaClick(Categoria categoria);
     }
 
-    // Interfaz para el click largo (eliminar)
-    public interface OnCategoriaLongClickListener {
-        void onLongClick(Categoria categoria);
-    }
-
+    // CONSTRUCTOR ACTUALIZADO: Solo pide 3 cosas
     public CategoriaAdapter(Context context,
                             List<Categoria> listaCategorias,
-                            OnCategoriaClickListener listener,
-                            OnCategoriaLongClickListener longClickListener) {
+                            OnCategoriaClickListener listener) {
         this.context = context;
         this.listaCategorias = listaCategorias;
         this.listener = listener;
-        this.longClickListener = longClickListener;
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -67,56 +62,43 @@ public class CategoriaAdapter extends RecyclerView.Adapter<CategoriaAdapter.Cate
         // 1. Poner el nombre
         holder.tvNombre.setText(categoria.getNombre());
 
-        // 2. Traducir el HEX (String) a un Color de Android
+        // 2. Traducir el HEX
         int colorFiltro;
         try {
             colorFiltro = Color.parseColor(categoria.getColor());
         } catch (Exception e) {
-            colorFiltro = Color.GRAY; // Color por si el servidor manda un HEX mal escrito
+            colorFiltro = Color.GRAY;
         }
 
-        // Tintar el icono con el color de la categoría
         holder.ivIcono.setColorFilter(colorFiltro);
 
-        // 3. Buscar el icono en la carpeta 'drawable' dinámicamente
+        // 3. Buscar el icono
         int resId = context.getResources().getIdentifier(categoria.getIcono(), "drawable", context.getPackageName());
         if (resId != 0) {
             holder.ivIcono.setImageResource(resId);
         } else {
-            // Icono por defecto por si te falta descargar alguno
             holder.ivIcono.setImageResource(android.R.drawable.ic_menu_gallery);
         }
 
-        // 4. Lógica de SELECCIÓN (Poner el borde si está seleccionado)
+        // 4. Lógica de SELECCIÓN VISUAL (Borde)
         if (posicionSeleccionada == position) {
             holder.cardIcono.setStrokeColor(colorFiltro);
-            holder.cardIcono.setStrokeWidth(6); // Borde grueso
+            holder.cardIcono.setStrokeWidth(6);
         } else {
             holder.cardIcono.setStrokeColor(Color.TRANSPARENT);
-            holder.cardIcono.setStrokeWidth(0); // Sin borde
+            holder.cardIcono.setStrokeWidth(0);
         }
 
-        // 1. Click normal (Seleccionar)
+        // 5. ¡CLIC ÚNICO Y LIMPIO!
         holder.itemView.setOnClickListener(v -> {
-            // Cambiamos la selección actual
             int posicionAnterior = posicionSeleccionada;
             posicionSeleccionada = position;
 
-            // Le decimos al RecyclerView que repinte la vieja y la nueva posición para animar el borde
             notifyItemChanged(posicionAnterior);
             notifyItemChanged(posicionSeleccionada);
 
-            // Avisamos a la pantalla principal
+            // Le pasamos la pelota al BottomSheet (Él decidirá si estamos en Modo Edición o no)
             listener.onCategoriaClick(categoria);
-        });
-
-        // 2. Click largo (Eliminar)
-        holder.itemView.setOnLongClickListener(v -> {
-            if (longClickListener != null) {
-                longClickListener.onLongClick(categoria);
-            }
-            // Retornamos true para indicar que ya hemos consumido este evento
-            return true;
         });
     }
 

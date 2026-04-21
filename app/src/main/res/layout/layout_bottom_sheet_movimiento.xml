@@ -110,7 +110,17 @@
             android:text="Nueva"
             android:textColor="?attr/colorOnSurface"
             app:icon="@android:drawable/ic_input_add"
-            app:iconTint="?attr/colorOnSurface" />
+            app:iconTint="?attr/colorOnSurface"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_editar_categorias_toggle"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Editar"
+            android:textColor="?attr/colorOnSurface"
+            app:icon="@android:drawable/ic_input_add"
+            app:iconTint="?attr/colorOnSurface"/>
 
     </LinearLayout>
 
