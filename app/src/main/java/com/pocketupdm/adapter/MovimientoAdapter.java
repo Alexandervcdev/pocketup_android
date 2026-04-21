@@ -1,12 +1,12 @@
 package com.pocketupdm.adapter;
 
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -14,7 +14,6 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.datepicker.OnSelectionChangedListener;
 import com.pocketupdm.R;
 import com.pocketupdm.dto.MovimientoResponse;
 import com.pocketupdm.model.MovementType;
@@ -26,23 +25,25 @@ public class MovimientoAdapter extends RecyclerView.Adapter<MovimientoAdapter.Mo
 
     private Context context;
     private List<MovimientoResponse> movimientosList;
-    private boolean isSelectionMode = false; // ¿Estamos borrando cosas?
-    private OnSelectionChangeListener selectionListener;
-    public interface OnSelectionChangeListener {
-        void onSelectionChanged(int count);
-    }
-    // Constructor
-    public MovimientoAdapter(Context context, List<MovimientoResponse> movimientosList, OnSelectionChangeListener listener) {
-        this.context = context;
-        // Si la lista es null, inicializamos una vacía para evitar crasheos
-        this.movimientosList = movimientosList != null ? movimientosList : new ArrayList<>();
-        this.selectionListener = listener;
+
+    // 1. NUEVA INTERFAZ: Escucha los clics de editar y eliminar
+    private OnMovimientoOpcionesListener listener;
+
+    public interface OnMovimientoOpcionesListener {
+        void onEditar(MovimientoResponse movimiento);
+        void onEliminar(MovimientoResponse movimiento);
     }
 
-    // Método para actualizar la lista (útil para cuando descarguemos los datos de la API)
+    // Constructor Actualizado
+    public MovimientoAdapter(Context context, List<MovimientoResponse> movimientosList, OnMovimientoOpcionesListener listener) {
+        this.context = context;
+        this.movimientosList = movimientosList != null ? movimientosList : new ArrayList<>();
+        this.listener = listener;
+    }
+
     public void setMovimientos(List<MovimientoResponse> nuevosMovimientos) {
         this.movimientosList = nuevosMovimientos;
-        notifyDataSetChanged(); // Avisa a Android que redibuje la lista
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -57,7 +58,6 @@ public class MovimientoAdapter extends RecyclerView.Adapter<MovimientoAdapter.Mo
         MovimientoResponse movimiento = movimientosList.get(position);
 
         // 1. Textos básicos (Nota y Fecha)
-        // He añadido la categoría al texto para que quede más completo si no hay nota.
         String notaPrincipal = (movimiento.getNota() != null && !movimiento.getNota().isEmpty())
                 ? movimiento.getNota()
                 : (movimiento.getCategoria() != null ? movimiento.getCategoria().getNombre() : "Sin descripción");
@@ -73,42 +73,33 @@ public class MovimientoAdapter extends RecyclerView.Adapter<MovimientoAdapter.Mo
             holder.tvImporte.setTextColor(ContextCompat.getColor(context, R.color.red));
         }
 
-        // 3. LÓGICA DE LA CATEGORÍA (¡La Magia Nueva!) 🪄
+        // 3. LÓGICA DE LA CATEGORÍA
         if (movimiento.getCategoria() != null) {
-            // A. Extraemos el color de la categoría
             int colorCategoria;
             try {
-                // Parseamos el HEX que viene del backend (Ej: "#FFCA28")
                 colorCategoria = Color.parseColor(movimiento.getCategoria().getColor());
             } catch (Exception e) {
-                // Si algo falla, ponemos un gris por defecto
                 colorCategoria = ContextCompat.getColor(context, R.color.white_pu);
             }
 
-            // B. Buscamos el icono dinámicamente en la carpeta drawable de Android
             int resIdIcono = context.getResources().getIdentifier(
-                    movimiento.getCategoria().getIcono(), // Ej: "ic_payments"
+                    movimiento.getCategoria().getIcono(),
                     "drawable",
                     context.getPackageName()
             );
 
-            // C. Aplicamos los estilos
             if (resIdIcono != 0) {
                 holder.ivIcono.setImageResource(resIdIcono);
             } else {
-                // Si se te olvidó descargar el icono, ponemos uno genérico
                 holder.ivIcono.setImageResource(android.R.drawable.ic_menu_agenda);
             }
 
-            // Pintamos el fondo de la "bolita" con un color clarito (transparente 20%) del color original
-            // El color original lo usamos para pintar el icono en sí.
             int colorFondoClarito = Color.argb(40, Color.red(colorCategoria), Color.green(colorCategoria), Color.blue(colorCategoria));
 
             holder.cardIcono.setCardBackgroundColor(colorFondoClarito);
             holder.ivIcono.setColorFilter(colorCategoria);
 
         } else {
-            // 4. Lógica de Respaldo (Por si hay movimientos antiguos sin categoría en la BBDD)
             holder.cardIcono.setCardBackgroundColor(ContextCompat.getColor(context, R.color.white_pu));
             if (movimiento.getTipo() == MovementType.INGRESO) {
                 holder.ivIcono.setImageResource(android.R.drawable.arrow_up_float);
@@ -119,57 +110,34 @@ public class MovimientoAdapter extends RecyclerView.Adapter<MovimientoAdapter.Mo
             }
         }
 
-        // 5. LÓGICA VISUAL DE SELECCIÓN (Mantengo tu código original)
-        if (movimiento.isSelected()) {
-            holder.itemView.setBackgroundColor(Color.parseColor("#1A8FE3CF"));
-        } else {
-            holder.itemView.setBackgroundColor(Color.TRANSPARENT);
+        // 4. LÓGICA DEL MENÚ DE 3 PUNTOS (¡La magia de hoy!)
+        if (listener == null) {
+            // Si el listener es null (como pasa en tu HomeFragment), OCULTAMOS el ícono
+            holder.ivOpciones.setVisibility(View.GONE);
+        }else{
+            // Si hay un listener (como en tu HistorialFragment), MOSTRAMOS el ícono y su menú
+            holder.ivOpciones.setVisibility(View.VISIBLE);
+            holder.ivOpciones.setOnClickListener(v -> {
+                // Creamos el menú emergente anclado al ícono
+                PopupMenu popup = new PopupMenu(context, holder.ivOpciones);
+                // Añadimos las opciones (el orden importa)
+                popup.getMenu().add("Editar");
+                popup.getMenu().add("Eliminar");
+
+                // Escuchamos qué opción elige el usuario
+                popup.setOnMenuItemClickListener(item -> {
+                    if (item.getTitle().equals("Editar")) {
+                        if (listener != null) listener.onEditar(movimiento);
+                    } else if (item.getTitle().equals("Eliminar")) {
+                        if (listener != null) listener.onEliminar(movimiento);
+                    }
+                    return true;
+                });
+
+                // Mostramos el menú
+                popup.show();
+            });
         }
-
-        // CLIC LARGO: Activa el modo selección
-        holder.itemView.setOnLongClickListener(v -> {
-            if (!isSelectionMode) {
-                isSelectionMode = true;
-                toggleSelection(position);
-            }
-            return true;
-        });
-
-        // CLIC NORMAL: Si estamos en modo selección, marca/desmarca.
-        holder.itemView.setOnClickListener(v -> {
-            if (isSelectionMode) {
-                toggleSelection(position);
-            }
-        });
-    }
-    private void toggleSelection(int position) {
-        movimientosList.get(position).setSelected(!movimientosList.get(position).isSelected());
-        notifyItemChanged(position);
-
-        // Contamos cuántos hay seleccionados
-        int count = getSelectedCount();
-        if (count == 0) isSelectionMode = false; // Si desmarcamos todo, salimos del modo
-        if (selectionListener != null) selectionListener.onSelectionChanged(count);
-    }
-    public int getSelectedCount() {
-        int count = 0;
-        for (MovimientoResponse m : movimientosList) {
-            if (m.isSelected()) count++;
-        }
-        return count;
-    }
-    public List<Long> getSelectedIds() {
-        List<Long> ids = new ArrayList<>();
-        for (MovimientoResponse m : movimientosList) {
-            if (m.isSelected()) ids.add(m.getId());
-        }
-        return ids;
-    }
-
-    public void exitSelectionMode() {
-        isSelectionMode = false;
-        for (MovimientoResponse m : movimientosList) m.setSelected(false);
-        notifyDataSetChanged();
     }
 
     @Override
@@ -182,6 +150,7 @@ public class MovimientoAdapter extends RecyclerView.Adapter<MovimientoAdapter.Mo
         TextView tvNota, tvFecha, tvImporte;
         MaterialCardView cardIcono;
         ImageView ivIcono;
+        ImageView ivOpciones; // ¡No olvides declarar el nuevo ícono!
 
         public MovimientoViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -190,6 +159,7 @@ public class MovimientoAdapter extends RecyclerView.Adapter<MovimientoAdapter.Mo
             tvImporte = itemView.findViewById(R.id.tv_movimiento_importe);
             cardIcono = itemView.findViewById(R.id.card_icono_movimiento);
             ivIcono = itemView.findViewById(R.id.iv_icono_movimiento);
+            ivOpciones = itemView.findViewById(R.id.iv_opciones_movimiento); // Lo vinculamos al XML
         }
     }
 }

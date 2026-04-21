@@ -1,5 +1,7 @@
 package com.pocketupdm.model;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.io.Serializable;
 
 public class Categoria implements Serializable {
@@ -8,6 +10,17 @@ public class Categoria implements Serializable {
     private String icono; // Aquí vendrá "ic_restaurant", "ic_car", etc.
     private String color; // Aquí vendrá el Hex "#FF7043"
     private Usuario usuario;
+
+    @SerializedName("usuarioId")
+    private Long usuarioId;
+
+    public Long getUsuarioId() {
+        return usuarioId;
+    }
+
+    public void setUsuarioId(Long usuarioId) {
+        this.usuarioId = usuarioId;
+    }
 
     public Categoria() {}
 

@@ -35,7 +35,10 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:hint="@string/example_import"
-        app:layout_constraintTop_toBottomOf="@id/tv_titulo_sheet">
+        app:layout_constraintTop_toBottomOf="@id/tv_titulo_sheet"
+
+        app:boxStrokeColor="@color/selector_input_color"
+        app:hintTextColor="@color/selector_hint_color">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_importe"
@@ -54,7 +57,6 @@
         android:hint="@string/date"
         app:startIconDrawable="@android:drawable/ic_menu_my_calendar"
         app:layout_constraintTop_toBottomOf="@id/til_importe">
-
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_fecha"
             android:layout_width="match_parent"
@@ -71,7 +73,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:hint="@string/note_optional"
-        app:layout_constraintTop_toBottomOf="@id/til_fecha">
+        app:layout_constraintTop_toBottomOf="@id/til_fecha"
+        app:boxStrokeColor="@color/selector_input_color"
+        app:hintTextColor="@color/selector_hint_color">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_nota"
@@ -104,7 +108,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Nueva"
-            app:icon="@android:drawable/ic_input_add" />
+            android:textColor="?attr/colorOnSurface"
+            app:icon="@android:drawable/ic_input_add"
+            app:iconTint="?attr/colorOnSurface" />
+
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView

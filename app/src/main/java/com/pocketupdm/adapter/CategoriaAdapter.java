@@ -22,6 +22,7 @@ public class CategoriaAdapter extends RecyclerView.Adapter<CategoriaAdapter.Cate
     private final Context context;
     private List<Categoria> listaCategorias;
     private final OnCategoriaClickListener listener;
+    private OnCategoriaLongClickListener longClickListener; // ¡NUEVO AVISADOR PARA BORRAR!
 
     // Aquí guardamos la posición de la categoría que el usuario ha tocado
     private int posicionSeleccionada = -1;
@@ -31,10 +32,19 @@ public class CategoriaAdapter extends RecyclerView.Adapter<CategoriaAdapter.Cate
         void onCategoriaClick(Categoria categoria);
     }
 
-    public CategoriaAdapter(Context context, List<Categoria> listaCategorias, OnCategoriaClickListener listener) {
+    // Interfaz para el click largo (eliminar)
+    public interface OnCategoriaLongClickListener {
+        void onLongClick(Categoria categoria);
+    }
+
+    public CategoriaAdapter(Context context,
+                            List<Categoria> listaCategorias,
+                            OnCategoriaClickListener listener,
+                            OnCategoriaLongClickListener longClickListener) {
         this.context = context;
         this.listaCategorias = listaCategorias;
         this.listener = listener;
+        this.longClickListener = longClickListener;
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -86,7 +96,7 @@ public class CategoriaAdapter extends RecyclerView.Adapter<CategoriaAdapter.Cate
             holder.cardIcono.setStrokeWidth(0); // Sin borde
         }
 
-        // 5. Detectar el Clic
+        // 1. Click normal (Seleccionar)
         holder.itemView.setOnClickListener(v -> {
             // Cambiamos la selección actual
             int posicionAnterior = posicionSeleccionada;
@@ -98,6 +108,15 @@ public class CategoriaAdapter extends RecyclerView.Adapter<CategoriaAdapter.Cate
 
             // Avisamos a la pantalla principal
             listener.onCategoriaClick(categoria);
+        });
+
+        // 2. Click largo (Eliminar)
+        holder.itemView.setOnLongClickListener(v -> {
+            if (longClickListener != null) {
+                longClickListener.onLongClick(categoria);
+            }
+            // Retornamos true para indicar que ya hemos consumido este evento
+            return true;
         });
     }
 

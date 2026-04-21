@@ -2,12 +2,8 @@ package com.pocketupdm.fragment;
 
 import static android.content.Context.MODE_PRIVATE;
 
-import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -23,6 +19,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.credentials.ClearCredentialStateRequest;
 import androidx.credentials.CredentialManager;
@@ -39,12 +36,14 @@ import com.pocketupdm.R;
 import com.pocketupdm.dto.UsuarioResponse;
 import com.pocketupdm.dto.UsuarioUpdateRequest;
 import com.pocketupdm.network.RetrofitClient;
+import com.pocketupdm.utils.DialogUtils;
 import com.pocketupdm.utils.NavigationUtil;
 import com.pocketupdm.utils.SessionManager;
 import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Response;
+import retrofit2.Callback;
 
 public class SettingFragment extends Fragment {
     // Variables de las vistas
@@ -79,8 +78,10 @@ public class SettingFragment extends Fragment {
         String temaGuardado = prefs.getString("temaNombre", "Predeterminado");
         tvTema.setText(temaGuardado);
 
+        //datos cargados del sharedpreferences
+        cargarDatosDesdeCache();
         obtenerDatosPerfil();
-        //cargarDatosDelUsuario();
+
         view.findViewById(R.id.btn_edit_profile).setOnClickListener(v -> mostrarBottomSheetEditarNombre());
         view.findViewById(R.id.row_edit_pais).setOnClickListener(v -> mostrarBottomSheetSeleccion("País", new String[]{"España", "EE.UU", "Colombia", "Otro"}, tvPais, true));
         view.findViewById(R.id.row_edit_idioma).setOnClickListener(v -> mostrarBottomSheetSeleccion("Idioma", new String[]{"Español", "Inglés"}, tvIdioma, false));
@@ -93,18 +94,20 @@ public class SettingFragment extends Fragment {
 
         //listeners de los botones
             //cerrar sesion
-        btnLogout.setOnClickListener(v -> mostrarDialogoCustom(
+        btnLogout.setOnClickListener(v -> DialogUtils.mostrarDialogoConfirmacion(
+                requireContext(),
                 "Cerrar Sesión",
                 "¿Deseas cerrar sesión de tu cuenta?",
-                "salir",
+                "Salir",
                 R.color.red,
                 R.color.turquesa_oscuro,
-                this::ejecutarCierreSesion // Pasamos la función que se ejecutará si dice que sí
+                this::ejecutarCierreSesion
         ));
             //eliminar cuenta
-        btnDeleteAccount.setOnClickListener(v -> mostrarDialogoCustom(
+        btnDeleteAccount.setOnClickListener(v -> DialogUtils.mostrarDialogoConfirmacion(
+                requireContext(),
                 "Eliminar Cuenta",
-                "Esta acción es irreversible. Se borrarán todos tus movimientos, nivel y progreso de forma permanente. ¿Deseas continuar?",
+                "Esta acción es irreversible. Se borrarán todos tus movimientos de forma permanente. ¿Deseas continuar?",
                 "Eliminar",
                 R.color.turquesa_oscuro,
                 R.color.red,
@@ -117,55 +120,36 @@ public class SettingFragment extends Fragment {
         Long usuarioId = sessionManager.getUsuarioId();
         if (usuarioId == -1L) return;
 
-        // Llamamos al backend para obtener la foto, país e idioma reales
-        com.pocketupdm.network.RetrofitClient.getApiService().obtenerPerfil(usuarioId)
-                .enqueue(new retrofit2.Callback<com.pocketupdm.dto.UsuarioResponse>() {
+        RetrofitClient.getApiService().obtenerPerfil(usuarioId)
+                .enqueue(new Callback<UsuarioResponse>() {
                     @Override
-                    public void onResponse(Call<com.pocketupdm.dto.UsuarioResponse> call, Response<UsuarioResponse> response) {
+                    public void onResponse(Call<UsuarioResponse> call, Response<UsuarioResponse> response) {
                         if (response.isSuccessful() && response.body() != null) {
                             UsuarioResponse user = response.body();
 
-                            // 1. Nombre (Prioridad: API -> Session)
-                            tvName.setText(user.getNombre() != null ? user.getNombre() : sessionManager.getUsuarioNombre());
+                            String nombreBackend = user.getNombre() != null ? user.getNombre() : sessionManager.getUsuarioNombre();
+                            String paisBackend = (user.getPais() != null && !user.getPais().isEmpty()) ? user.getPais() : "España";
+                            String idiomaBackend = (user.getIdioma() != null && !user.getIdioma().isEmpty()) ? user.getIdioma() : "Español";
+                            String monedaBackend = (user.getMoneda() != null && !user.getMoneda().isEmpty()) ? user.getMoneda() : "EUR";
 
-                            // 2. País (Lógica de Fallback)
-                            if (user.getPais() != null && !user.getPais().isEmpty()) {
-                                tvPais.setText(user.getPais());
-                                paisSeleccionado = user.getPais();
-                            } else {
-                                tvPais.setText("España"); // Valor por defecto
-                                paisSeleccionado = "España";
-                            }
+                            // Actualizar UI con lo que llegó del servidor
+                            tvName.setText(nombreBackend);
+                            tvPais.setText(paisBackend);
+                            tvIdioma.setText(idiomaBackend);
+                            tvMoneda.setText(monedaBackend);
 
-                            // 3. Idioma (Lógica de Fallback)
-                            if (user.getIdioma() != null && !user.getIdioma().isEmpty()) {
-                                tvIdioma.setText(user.getIdioma());
-                                idiomaSeleccionado = user.getIdioma();
-                            } else {
-                                tvIdioma.setText("Español"); // Valor por defecto
-                                idiomaSeleccionado = "Español";
-                            }
+                            // Actualizar variables locales y guardar en Caché
+                            paisSeleccionado = paisBackend;
+                            idiomaSeleccionado = idiomaBackend;
+                            monedaSeleccionada = monedaBackend;
 
-                            // 4. Moneda (Lógica de Fallback)
-                            if (user.getMoneda() != null && !user.getMoneda().isEmpty()) {
-                                tvMoneda.setText(user.getMoneda());
-                                monedaSeleccionada = user.getMoneda();
-                            } else {
-                                tvMoneda.setText("EUR"); // Valor por defecto
-                                monedaSeleccionada = "EUR";
-                            }
-
-                            // 4. Cargar Foto (Firebase o Google)
-                            cargarFotoPerfil();
+                            guardarAjustesEnCache(nombreBackend, paisBackend, idiomaBackend, monedaBackend);
                         }
                     }
 
                     @Override
                     public void onFailure(Call<UsuarioResponse> call, Throwable t) {
-                        // Si falla el internet, ponemos los valores de la sesión local
-                        tvName.setText(sessionManager.getUsuarioNombre());
-                        tvPais.setText("España");
-                        tvIdioma.setText("Español");
+                        Log.d("Ajustes", "Sin conexión, usando datos de caché local");
                     }
                 });
     }
@@ -181,10 +165,6 @@ public class SettingFragment extends Fragment {
         }
     }
 
-
-    /**
-     * Abre un pop-up con un campo de texto para escribir el nuevo nombre
-     */
     /**
      * Bottom Sheet con campo de texto para editar el nombre
      */
@@ -280,20 +260,27 @@ public class SettingFragment extends Fragment {
             tvOpcion.setClickable(true);
 
             tvOpcion.setOnClickListener(v -> {
-                // MAGIA AQUÍ: Guardar en SharedPreferences antes de que la pantalla se reinicie
-                android.content.SharedPreferences prefs = requireActivity().getSharedPreferences("PreferenciasApp", android.content.Context.MODE_PRIVATE);
-                prefs.edit().putString("temaNombre", opcion).apply();
+                // 1. Cerramos el diálogo INMEDIATAMENTE para evitar dobles clics
+                dialog.dismiss();
 
+                // 2. Verificamos que el fragmento siga atado a la pantalla para evitar el crash
+                if (!isAdded() || getActivity() == null) return;
+
+                // 3. Guardamos la preferencia y actualizamos el texto
+                SharedPreferences prefs = requireActivity().getSharedPreferences("PreferenciasApp", MODE_PRIVATE);
+                prefs.edit().putString("temaNombre", opcion).apply();
                 tvTema.setText(opcion);
 
-                if (index == 0) {
-                    androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO);
-                } else if (index == 1) {
-                    androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES);
-                } else {
-                    androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-                }
-                dialog.dismiss();
+                // 4. ¡LA MAGIA! Retrasamos el "reinicio" visual 200 milisegundos
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    if (index == 0) {
+                        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+                    } else if (index == 1) {
+                        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+                    } else {
+                        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                    }
+                }, 400);
             });
             llOpciones.addView(tvOpcion);
         }
@@ -322,6 +309,9 @@ public class SettingFragment extends Fragment {
                         if (response.isSuccessful()) {
                             Toast.makeText(getContext(), "Perfil actualizado", Toast.LENGTH_SHORT).show();
                             sessionManager.crearSesion(usuarioId, nuevoNombre);
+
+                            // ¡NUEVA LÍNEA VITAL!: Guardamos los cambios en la caché para la próxima vez
+                            guardarAjustesEnCache(nuevoNombre, paisSeleccionado, idiomaSeleccionado, monedaSeleccionada);
                         } else {
                             Toast.makeText(getContext(), "Error al guardar los cambios", Toast.LENGTH_SHORT).show();
                         }
@@ -371,45 +361,6 @@ public class SettingFragment extends Fragment {
         dialog.dismiss(); // Cierra el menú hacia abajo
     }
 
-    /**
-     * Metodo que sirve para mostrar diálogos personalizados.
-     * @param accionAceptar Un bloque de código (Runnable) que se ejecutará si el usuario presiona el botón derecho.
-     */
-    private void mostrarDialogoCustom(String titulo, String mensaje, String textoBoton, int colorBotonIzquierdo, int colorBotonDerecho,Runnable accionAceptar) {
-        // Creamos el diálogo
-        Dialog dialog = new Dialog(requireContext());
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setCancelable(true);
-        dialog.setContentView(R.layout.layout_dialog_confirm);
-
-        // Hacemos que el fondo del diálogo sea transparente para que se vean las esquinas redondeadas de nuestra tarjeta XML
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        // Vinculamos las vistas del XML
-        TextView tvTitle = dialog.findViewById(R.id.tv_dialog_title);
-        TextView tvMessage = dialog.findViewById(R.id.tv_dialog_message);
-        MaterialButton btnCancel = dialog.findViewById(R.id.btn_dialog_cancel);
-        MaterialButton btnAction = dialog.findViewById(R.id.btn_dialog_action);
-
-        // Aplicamos los textos
-        tvTitle.setText(titulo);
-        tvMessage.setText(mensaje);
-        btnAction.setText(textoBoton);
-
-        btnCancel.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), colorBotonIzquierdo)));
-        btnAction.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), colorBotonDerecho)));
-
-        // Listeners de los botones
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
-        btnAction.setOnClickListener(v -> {
-            dialog.dismiss();
-            accionAceptar.run(); // Ejecutamos la función que nos pasaron por parámetro
-        });
-        dialog.show();
-    }
-
     private void ejecutarCierreSesion() {
         SessionManager sessionManager = new SessionManager(requireContext());
         sessionManager.cerrarSesion();
@@ -423,11 +374,11 @@ public class SettingFragment extends Fragment {
                 new CredentialManagerCallback<Void, ClearCredentialException>() {
                     @Override
                     public void onResult(Void result) {
-                        redirigirAlLogin();
+                        NavigationUtil.irALogin(getActivity());
                     }
                     @Override
                     public void onError(@NonNull ClearCredentialException e) {
-                        redirigirAlLogin();
+                        NavigationUtil.irALogin(getActivity());
                     }
                 }
         );
@@ -496,18 +447,42 @@ public class SettingFragment extends Fragment {
                 ContextCompat.getMainExecutor(requireContext()), new CredentialManagerCallback<Void, ClearCredentialException>() {
                     @Override
                     public void onResult(Void result) {
-                        redirigirAlLogin();
+                        NavigationUtil.irALogin(getActivity());
                     }
                     @Override
                     public void onError(@NonNull ClearCredentialException e) {
-                        redirigirAlLogin();
+                        NavigationUtil.irALogin(getActivity());
                     }
                 });
     }
 
-    private void redirigirAlLogin() {
-        if (getActivity() != null) {
-            NavigationUtil.irALogin(getActivity());
-        }
+    private void cargarDatosDesdeCache() {
+        SharedPreferences prefs = requireActivity().getSharedPreferences("PreferenciasApp", MODE_PRIVATE);
+        SessionManager sessionManager = new SessionManager(requireContext());
+
+        // 1. Leer valores de la caché (con valores por defecto si está vacío)
+        String nombreCache = prefs.getString("nombre", sessionManager.getUsuarioNombre());
+        paisSeleccionado = prefs.getString("pais", "España");
+        idiomaSeleccionado = prefs.getString("idioma", "Español");
+        monedaSeleccionada = prefs.getString("moneda", "EUR");
+
+        // 2. Pintar en la pantalla al instante
+        tvName.setText(nombreCache);
+        tvPais.setText(paisSeleccionado);
+        tvIdioma.setText(idiomaSeleccionado);
+        tvMoneda.setText(monedaSeleccionada);
+
+        // 3. La foto de perfil ya es rápida porque Glide usa su propia caché
+        cargarFotoPerfil();
+    }
+
+    private void guardarAjustesEnCache(String nombre, String pais, String idioma, String moneda) {
+        SharedPreferences prefs = requireActivity().getSharedPreferences("PreferenciasApp", MODE_PRIVATE);
+        prefs.edit()
+                .putString("nombre", nombre)
+                .putString("pais", pais)
+                .putString("idioma", idioma)
+                .putString("moneda", moneda)
+                .apply();
     }
 }

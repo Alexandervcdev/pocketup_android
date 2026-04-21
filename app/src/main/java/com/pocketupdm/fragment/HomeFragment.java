@@ -1,8 +1,11 @@
 package com.pocketupdm.fragment;
 
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -12,6 +15,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -50,6 +54,7 @@ public class HomeFragment extends Fragment {
     private RecyclerView rvTopMovimientos;
     private MovimientoAdapter adapter;
 
+    private ImageView ivStatusSaldo;
     public HomeFragment() {
     }
 
@@ -62,10 +67,12 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         sessionManager = new SessionManager(requireContext());
-
+//vistas vinculadas
         // 1. Vincular Vistas de la Tarjeta de Balance
         tvFecha = view.findViewById(R.id.tv_home_fecha);
         tvSaldo = view.findViewById(R.id.tv_home_saldo);
+
+        ivStatusSaldo = view.findViewById(R.id.iv_status_saldo);
 
         // 2. Mensaje de bienvenida
         TextView tvWelcome = view.findViewById(R.id.tv_welcome);
@@ -86,6 +93,15 @@ public class HomeFragment extends Fragment {
         // Le pasamos 'null' al listener porque aquí NO queremos seleccionar para borrar
         adapter = new MovimientoAdapter(getContext(), new ArrayList<>(), null);
         rvTopMovimientos.setAdapter(adapter);
+
+        // 4.5. Configurar clic en "Últimos movimientos" para ir al Historial
+        TextView tvVerTodo = view.findViewById(R.id.btn_ver_todos);
+        tvVerTodo.setOnClickListener(v -> {
+            Bundle bundle = new Bundle();
+            // Enviamos 0 para que abra la primera pestaña (Ingresos) o la que prefieras
+            bundle.putInt("TAB_SELECCIONADO", 0);
+            Navigation.findNavController(v).navigate(R.id.action_nav_home_to_nav_historial, bundle);
+        });
 
         // 5. Configurar el Menú Flotante (Botón "+")
         MaterialButton btnMenu = view.findViewById(R.id.btn_menu_movimientos);
@@ -145,8 +161,22 @@ public class HomeFragment extends Fragment {
             }
         }
 
+        // 1. Mostrar el texto formateado
         NumberFormat formatoMoneda = NumberFormat.getCurrencyInstance(new Locale("es", "ES"));
         tvSaldo.setText(formatoMoneda.format(saldoTotal));
+
+        // 2. LÓGICA DEL ICONO
+        if (saldoTotal.compareTo(BigDecimal.ZERO) >= 0) {
+            // Saldo Positivo o Cero
+            ivStatusSaldo.setImageResource(R.drawable.ic_ingreso);
+            // Opcional: Un tinte que se vea bien sobre el turquesa (ej. blanco o verde oscuro)
+            ivStatusSaldo.setImageTintList(ColorStateList.valueOf(Color.WHITE));
+        } else {
+            // Saldo Negativo
+            ivStatusSaldo.setImageResource(R.drawable.ic_spent);
+            // Opcional: Un tinte para alertar (ej. rojo suave para que no choque con el turquesa)
+            ivStatusSaldo.setImageTintList(ColorStateList.valueOf(Color.WHITE));
+        }
     }
 
     private void mostrarMenuOpciones() {

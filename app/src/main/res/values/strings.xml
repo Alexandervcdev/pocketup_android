@@ -53,4 +53,9 @@
     <string name="date">Fecha</string>
     <string name="note_optional">Nota (Opcional)</string>
     <string name="save_movement">Guardar Movimiento</string>
+    <string name="new_category">Nueva Categoría</string>
+    <string name="example_category">Nombre (ej. Mascotas, Gimnasio)</string>
+    <string name="select_color">Elige un Color</string>
+    <string name="select_icon">Elige un Icono</string>
+    <string name="create_category">Crear Categoría</string>
 </resources>

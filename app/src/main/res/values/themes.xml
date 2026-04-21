@@ -11,4 +11,13 @@
     <style name="Theme.PocketupDM" parent="Base.Theme.PocketupDM" />
     <color name="turquesa_dinamico">@color/turquesa</color>
     <color name="color_nav_indicador">@color/turquesa_oscuro</color>
+
+    <!-- Colores del calendario -->
+    <style name="Theme.PocketUpDM" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    </style>
+
+    <style name="Theme.App.Calendar.Turquesa" parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
+        <item name="colorPrimary">@color/turquesa_oscuro</item>
+        <item name="colorOnPrimary">@color/white</item>
+    </style>
 </resources>

@@ -23,6 +23,7 @@ import com.pocketupdm.adapter.CategoriaAdapter;
 import com.pocketupdm.model.Categoria;
 import com.pocketupdm.model.MovementType;
 import com.pocketupdm.network.RetrofitClient;
+import com.pocketupdm.utils.DialogUtils;
 import com.pocketupdm.utils.SessionManager;
 
 import java.math.BigDecimal;
@@ -107,6 +108,7 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
         etFecha.setOnClickListener(v -> {
             MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker()
                     .setTitleText("Selecciona una fecha")
+                    .setTheme(R.style.Theme_App_Calendar_Turquesa)
                     .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
                     .build();
 
@@ -184,11 +186,37 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
                 if (response.isSuccessful() && response.body() != null) {
                     List<Categoria> categorias = response.body();
 
-                    // Configuramos el Adapter y le pasamos la lista
-                    categoriaAdapter = new CategoriaAdapter(getContext(), categorias, categoria -> {
-                        // Cuando el usuario toca una bolita, guardamos su ID
-                        categoriaSeleccionadaId = categoria.getId();
-                    });
+                    // Instanciamos el adaptador con LOS DOS listeners
+                    categoriaAdapter = new CategoriaAdapter(getContext(), categorias,
+                            // 1. Acción de Click Normal (Seleccionar)
+                            categoria -> {
+                                categoriaSeleccionadaId = categoria.getId();
+                            },
+                                // 2. CLICK LARGO: Menú de opciones
+                            categoria -> {
+                                android.util.Log.d("DEBUG_POCKET", "Categoría: " + categoria.getNombre() + " | ID Usuario: " + categoria.getUsuarioId());
+                                // SEGURIDAD: Si es una categoría del sistema (usuario == null), no dejamos tocarla
+                                if (categoria.getUsuarioId() == null) {
+                                    Toast.makeText(getContext(), "Las categorías del sistema no se pueden modificar", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+
+                                // Definimos las opciones
+                                String[] opciones = {"Editar", "Eliminar"};
+
+                                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                                        .setTitle(categoria.getNombre()) // El título es el nombre de la categoría
+                                        .setItems(opciones, (dialog, which) -> {
+                                            if (which == 0) {
+                                                // OPCIÓN: EDITAR (RF 5.3)
+                                                abrirEditorCategoria(categoria);
+                                            } else if (which == 1) {
+                                                // OPCIÓN: ELIMINAR (RF 5.4)
+                                                confirmarEliminacion(categoria);
+                                            }
+                                        })
+                                        .show();
+                            });
                     rvCategorias.setAdapter(categoriaAdapter);
                 }
             }
@@ -198,5 +226,46 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
                 Toast.makeText(getContext(), "Error al cargar categorías", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void eliminarCategoriaEnBackend(Long idCategoria) {
+        RetrofitClient.getApiService().eliminarCategoria(idCategoria).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(getContext(), "Categoría eliminada", Toast.LENGTH_SHORT).show();
+                    // Refrescamos la lista para que desaparezca la bolita
+                    cargarCategoriasDesdeBackend();
+                } else {
+                    Toast.makeText(getContext(), "No se puede eliminar la categoría del sistema", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(getContext(), "Error de red al eliminar", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // Lógica para lanzar el editor que ya preparamos
+    private void abrirEditorCategoria(Categoria categoria) {
+        NuevaCategoriaBottomSheet editSheet = new NuevaCategoriaBottomSheet();
+        editSheet.setCategoriaAEditar(categoria); // Le pasamos la categoría elegida
+        editSheet.setListener(this::cargarCategoriasDesdeBackend); // Recargar al terminar
+        editSheet.show(getParentFragmentManager(), "EditarCategoria");
+    }
+
+    // Lógica para confirmar el borrado usando tu nueva clase Utils
+    private void confirmarEliminacion(Categoria categoria) {
+        com.pocketupdm.utils.DialogUtils.mostrarDialogoConfirmacion(
+                requireContext(),
+                "Eliminar Categoría",
+                "¿Estás seguro de que quieres eliminar '" + categoria.getNombre() + "'? Sus movimientos se reasignarán a 'General'.",
+                "Eliminar",
+                R.color.black_pu, // Color para cancelar (tuyo de colors.xml)
+                R.color.red,      // Color para la acción de borrar
+                () -> eliminarCategoriaEnBackend(categoria.getId()) // La acción de borrado real
+        );
     }
 }

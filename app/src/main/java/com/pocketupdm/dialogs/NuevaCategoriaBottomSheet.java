@@ -43,6 +43,10 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
 
     private SessionManager sessionManager;
 
+    private Categoria categoriaAEditar = null;
+    public void setCategoriaAEditar(Categoria categoria) {
+        this.categoriaAEditar = categoria;
+    }
     public interface OnCategoriaGuardadaListener {
         void onGuardada();
     }
@@ -69,9 +73,17 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
         llIconos = view.findViewById(R.id.ll_contenedor_iconos);
         btnGuardar = view.findViewById(R.id.btn_guardar_categoria);
 
+        if (categoriaAEditar != null) {
+            etNombre.setText(categoriaAEditar.getNombre());
+            colorSeleccionado = categoriaAEditar.getColor();
+            iconoSeleccionado = categoriaAEditar.getIcono();
+            btnGuardar.setText("Actualizar");
+        }
 
         generarPaletaColores();
         generarPaletaIconos();
+
+
 
         btnGuardar.setOnClickListener(v -> guardarCategoria());
     }
@@ -101,7 +113,7 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
         }
     }
 
-    // --- MAGIA UI: Generar iconos seleccionables ---
+    // Generar iconos seleccionables ---
     private void generarPaletaIconos() {
         for (String nombreIcono : PALETA_ICONOS) {
             ImageView iconView = new ImageView(getContext());
@@ -135,47 +147,75 @@ public class NuevaCategoriaBottomSheet extends BottomSheetDialogFragment {
     private void guardarCategoria() {
         String nombre = etNombre.getText().toString().trim();
 
-        if (nombre.isEmpty() || colorSeleccionado == null || iconoSeleccionado == null) {
-            Toast.makeText(getContext(), "Por favor, completa nombre, color e icono.", Toast.LENGTH_SHORT).show();
+        // 1. Validaciones básicas (para crear y editar categoria)
+        if (nombre.isEmpty()) {
+            etNombre.setError("El nombre es obligatorio");
             return;
         }
 
-        Categoria nuevaCategoria = new Categoria();
-        nuevaCategoria.setNombre(nombre);
-        nuevaCategoria.setColor(colorSeleccionado);
-        nuevaCategoria.setIcono(iconoSeleccionado);
+        if (colorSeleccionado == null) {
+            Toast.makeText(getContext(), "Seleccione un color", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        // Asignamos el ID del usuario para que sea una categoría "Personalizada"
+        if (iconoSeleccionado == null) {
+            Toast.makeText(getContext(), "Seleccione un icono", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 2. Construimos el objeto con los datos de la UI
+        Categoria categoriaDatos = new Categoria();
+        categoriaDatos.setNombre(nombre);
+        categoriaDatos.setColor(colorSeleccionado);
+        categoriaDatos.setIcono(iconoSeleccionado);
+
         Usuario usuario = new Usuario();
         usuario.setId(sessionManager.getUsuarioId());
-        nuevaCategoria.setUsuario(usuario);
+        categoriaDatos.setUsuario(usuario);
 
         btnGuardar.setEnabled(false);
-        btnGuardar.setText("Guardando...");
+        btnGuardar.setText(categoriaAEditar != null ? "Actualizando..." : "Guardando...");
 
-        RetrofitClient.getApiService().crearCategoria(nuevaCategoria).enqueue(new Callback<Categoria>() {
+        // 3. MAGIA: Decidimos qué endpoint llamar
+        Call<Categoria> call;
+        String mensajeExito;
+
+        if (categoriaAEditar != null) {
+            // MODO EDICIÓN: Usamos PUT y el ID de la categoría existente
+            call = RetrofitClient.getApiService().actualizarCategoria(categoriaAEditar.getId(), categoriaDatos);
+            mensajeExito = "Categoría actualizada";
+        } else {
+            // MODO NUEVO: Usamos POST
+            call = RetrofitClient.getApiService().crearCategoria(categoriaDatos);
+            mensajeExito = "Categoría creada con éxito";
+        }
+
+        // 4. Ejecutamos la llamada (la lógica de respuesta es la misma)
+        call.enqueue(new Callback<Categoria>() {
             @Override
             public void onResponse(Call<Categoria> call, Response<Categoria> response) {
                 if (response.isSuccessful()) {
-                    Toast.makeText(getContext(), "Categoría creada con éxito", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), mensajeExito, Toast.LENGTH_SHORT).show();
+
                     if (listener != null) {
-                        listener.onGuardada();
+                        listener.onGuardada(); // Avisamos a la pantalla de atrás para que recargue
                     }
                     dismiss();
-                    // Aquí podrías notificar a la pantalla anterior para que recargue las categorías
                 } else {
-                    btnGuardar.setEnabled(true);
-                    btnGuardar.setText("Crear Categoría");
+                    reestablecerBoton();
                     Toast.makeText(getContext(), "Error del servidor", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<Categoria> call, Throwable t) {
-                btnGuardar.setEnabled(true);
-                btnGuardar.setText("Crear Categoría");
+                reestablecerBoton();
                 Toast.makeText(getContext(), "Error de red", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+    private void reestablecerBoton() {
+        btnGuardar.setEnabled(true);
+        btnGuardar.setText(categoriaAEditar != null ? "Actualizar" : "Crear Categoría");
     }
 }

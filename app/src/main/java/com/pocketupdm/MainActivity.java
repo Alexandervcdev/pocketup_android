@@ -71,7 +71,26 @@ public class MainActivity extends AppCompatActivity {
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.fragment_container);
         NavController navController = navHostFragment.getNavController();
+
+// 1. Configuramos el menú de forma estándar para que los iconos se pinten bien
         NavigationUI.setupWithNavController(navView, navController);
+
+// 2. EVENTO A: Cuando vienes de OTRA pestaña (Ej: De Ajustes a Inicio)
+        navView.setOnItemSelectedListener(item -> {
+            // Dejamos que Android haga la navegación normal hacia la pestaña
+            boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
+
+            // Inmediatamente después, forzamos a destruir cualquier fragmento que se haya quedado abierto encima
+            navController.popBackStack(item.getItemId(), false);
+
+            return handled;
+        });
+
+// 3. EVENTO B: Cuando YA ESTÁS en la pestaña y la vuelves a tocar (Ej: Estás en Historial y tocas Inicio)
+        navView.setOnItemReselectedListener(item -> {
+            // Limpiamos el fragmento que esté encima para volver a la raíz
+            navController.popBackStack(item.getItemId(), false);
+        });
 
         // 1. VERIFICAMOS Y PEDIMOS PERMISO DE NOTIFICACIONES (Obligatorio en Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
