@@ -15,10 +15,10 @@
             app:destination="@id/nav_historial" />
     </fragment>
     <fragment
-        android:id="@+id/nav_graphic"
-        android:name="com.pocketupdm.fragment.GraphicFragment"
+        android:id="@+id/nav_planificacion"
+        android:name="com.pocketupdm.fragment.PlanificacionFragment"
         android:label="fragment_graphic"
-        tools:layout="@layout/fragment_graphic" />
+        tools:layout="@layout/fragment_planificacion" />
     <fragment
         android:id="@+id/nav_character"
         android:name="com.pocketupdm.fragment.CharacterFragment"

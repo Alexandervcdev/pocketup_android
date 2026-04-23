@@ -84,7 +84,8 @@
                 app:layout_constraintBottom_toBottomOf="@id/tv_home_saldo"
                 app:layout_constraintStart_toEndOf="@id/tv_home_saldo"
                 app:layout_constraintTop_toTopOf="@id/tv_home_saldo"
-                tools:src="@drawable/ic_ingreso" />
+                tools:src="@drawable/ic_ingreso"
+                app:tint="?attr/colorOnSurface"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>

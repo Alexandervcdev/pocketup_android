@@ -6,8 +6,11 @@ import com.pocketupdm.dto.UsuarioRegistroRequest;
 import com.pocketupdm.dto.UsuarioResponse;
 import com.pocketupdm.dto.UsuarioUpdateRequest;
 import com.pocketupdm.model.Categoria;
+import com.pocketupdm.model.Meta;
+import com.pocketupdm.model.Presupuesto;
 import com.pocketupdm.model.Usuario;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -56,4 +59,38 @@ public interface ApiService {
     // 4. Eliminar una categoría (Recuerda que el backend reasignará los movimientos)
     @DELETE("categorias/delete/{id}")
     Call<Void> eliminarCategoria(@Path("id") Long id);
+
+    // ==========================================
+    // PRESUPUESTOS
+    // ==========================================
+    @GET("presupuestos/get/{usuarioId}")
+    Call<List<Presupuesto>> obtenerPresupuestos(@Path("usuarioId") Long usuarioId);
+
+    @POST("presupuestos/new")
+    Call<Presupuesto> crearPresupuesto(@Body Presupuesto presupuesto);
+
+    @PUT("presupuestos/update/{id}")
+    Call<Presupuesto> actualizarPresupuesto(@Path("id") Long id, @Body Presupuesto presupuesto);
+
+    @DELETE("presupuestos/delete/{id}")
+    Call<Void> eliminarPresupuesto(@Path("id") Long id);
+
+    // ==========================================
+    // METAS DE AHORRO
+    // ==========================================
+    @GET("metas/get/{usuarioId}")
+    Call<List<Meta>> obtenerMetas(@Path("usuarioId") Long usuarioId);
+
+    @POST("metas/new")
+    Call<Meta> crearMeta(@Body Meta meta);
+
+    @PUT("metas/update/{id}")
+    Call<Meta> actualizarMeta(@Path("id") Long id, @Body Meta meta);
+
+    @DELETE("metas/delete/{id}")
+    Call<Void> eliminarMeta(@Path("id") Long id);
+
+    // Endpoint especial para añadir dinero a la hucha sin enviar todo el objeto
+    @PUT("metas/{id}/add-fondos")
+    Call<Meta> agregarFondosMeta(@Path("id") Long id, @Body Map<String, BigDecimal> payload);
 }
