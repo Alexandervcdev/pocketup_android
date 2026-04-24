@@ -39,7 +39,7 @@
     <string name="dolar_symbol">$</string>
     <string name="cop">Peso Colombiano (COP)</string>
     <string name="cop_symbol">COP</string>
-    <string name="manage_money">Gestionar Dinero</string>
+    <string name="manage_money">Gestionar</string>
     <string name="que_deseas_hacer">¿Qué deseas hacer?</string>
     <string name="new_ingreso">Nuevo Ingreso</string>
     <string name="new_spent">Nuevo Gasto</string>

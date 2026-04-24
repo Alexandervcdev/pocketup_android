@@ -1,14 +1,18 @@
 package com.pocketupdm;
 
 import static com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL;
+import static com.pocketupdm.utils.NavigationUtil.irAMainActivity;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.pocketupdm.utils.SessionManager;
@@ -16,6 +20,7 @@ import com.pocketupdm.utils.SessionManager;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -67,39 +72,59 @@ public class LoginActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // 1. APLICAR TEMA (Antes de super.onCreate)
+        SharedPreferences prefs = getSharedPreferences("PreferenciasApp", MODE_PRIVATE);
+        String tema = prefs.getString("temaNombre", "Predeterminado");
+
+        if (tema.equals("Claro")) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else if (tema.equals("Oscuro")) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        }
+
         super.onCreate(savedInstanceState);
-        //autologin
+
+        // 2. AUTO-LOGIN (Ahorro de recursos)
         SessionManager sessionManager = new SessionManager(this);
         if (sessionManager.getUsuarioId() != -1L) {
-            // salto al menu principal
-            com.pocketupdm.utils.NavigationUtil.irAMainActivity(this);
-            Intent intent = new Intent(this, MainActivity.class);
+            irAMainActivity(this);
+            finish(); // ¡IMPORTANTE! Cerramos el Login para que no se quede detrás en la pila
             return;
         }
 
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_login);
+
+        // 3. LOGO DINÁMICO
+        ImageView ivLogo = findViewById(R.id.iv_login_logo);
+        int nightModeFlags = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+
+        if (nightModeFlags == Configuration.UI_MODE_NIGHT_YES) {
+            ivLogo.setImageResource(R.drawable.logo_blanco); // Tu versión blanca
+        } else {
+            ivLogo.setImageResource(R.drawable.logo); // Tu versión color
+        }
+
+        // 4. GESTIÓN DE INSETS
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
-        // Initialize Credential Manager
+        // 5. INICIALIZACIONES RESTANTES
         credentialManager = CredentialManager.create(this);
         mAuth = FirebaseAuth.getInstance();
 
-        // Vincular componentes de la vista
         etEmail = findViewById(R.id.ed_login_email);
         etPassword = findViewById(R.id.ed_login_pass);
         btnLogin = findViewById(R.id.bt_login_submit);
         btnLoginGoogle = findViewById(R.id.bt_login_google);
         chRemember = findViewById(R.id.ch_login_remeber_user);
 
-        //metodosAuxiliares
         cargarPreferencias();
-
-        //Listeners
         registerClickListener();
         LoginClickListener();
     }
@@ -110,7 +135,7 @@ public class LoginActivity extends AppCompatActivity {
      * automáticamente los campos de correo y contraseña en la interfaz.
      */
     private void cargarPreferencias() {
-        android.content.SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         boolean isChecked = preferences.getBoolean(PREF_REMEMBER, false);
         chRemember.setChecked(isChecked);
 
@@ -140,8 +165,8 @@ public class LoginActivity extends AppCompatActivity {
 
                 if (response.isSuccessful()) {
                     // LÓGICA DE RECORDAR USUARIO
-                    android.content.SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                    android.content.SharedPreferences.Editor editor = preferences.edit();
+                    SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    SharedPreferences.Editor editor = preferences.edit();
                     if (chRemember.isChecked()) {
                         editor.putString(PREF_EMAIL, email);
                         editor.putString(PREF_PASS, password);
@@ -157,7 +182,7 @@ public class LoginActivity extends AppCompatActivity {
                     // 2. Guardamos el ID y el Nombre del usuario
                     sessionManager.crearSesion(usuario.getId(), usuario.getNombre());
                     Toast.makeText(LoginActivity.this, "¡Bienvenido " + usuario.getNombre() + "!", Toast.LENGTH_SHORT).show();
-                    com.pocketupdm.utils.NavigationUtil.irAMainActivity(LoginActivity.this);
+                    irAMainActivity(LoginActivity.this);
                 } else {
                     String mensajeError = ErrorUtil.parseError(response);
                     Toast.makeText(LoginActivity.this, mensajeError, Toast.LENGTH_LONG).show();
@@ -298,7 +323,7 @@ public class LoginActivity extends AppCompatActivity {
                     sessionManager.crearSesion(usuarioGoogle.getId(), usuarioGoogle.getNombre());
                     //Log.d("LOGIN", "Usuario de Google registrado en el backend");
                     Toast.makeText(LoginActivity.this, "¡Bienvenido " + usuarioGoogle.getNombre() + "!", Toast.LENGTH_SHORT).show();
-                    com.pocketupdm.utils.NavigationUtil.irAMainActivity(LoginActivity.this);
+                    irAMainActivity(LoginActivity.this);
                 } else {
                     Log.e("LOGIN", "Error crítico en el servidor: " + response.code());
                     Toast.makeText(LoginActivity.this, "Error de sincronización con el servidor", Toast.LENGTH_SHORT).show();

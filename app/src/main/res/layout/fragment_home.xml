@@ -38,6 +38,7 @@
         app:cardElevation="4dp"
         app:cardBackgroundColor="@color/turquesa_dinamico"
         app:layout_constraintTop_toBottomOf="@id/tv_subtitle">
+
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -47,7 +48,7 @@
                 android:id="@+id/tv_label_balance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Balance Total"
+                android:text="Saldo Disponible"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:alpha="0.8"
@@ -69,13 +70,14 @@
                 android:id="@+id/tv_home_saldo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="8dp"
                 android:text="@string/loading"
                 android:textColor="?attr/colorOnSurface"
-                android:textSize="36sp"
+                android:textSize="32sp"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_label_balance" />
+
             <ImageView
                 android:id="@+id/iv_status_saldo"
                 android:layout_width="40dp"
@@ -101,11 +103,9 @@
         android:textSize="18sp"
         android:textStyle="bold"
         android:paddingStart="0dp"
-
         app:icon="@drawable/ic_open_in_new_24px"
         app:iconGravity="textEnd"
         app:iconTint="?attr/colorOnSurface"
-
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/card_balance" />
 
@@ -138,4 +138,5 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginBottom="16dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

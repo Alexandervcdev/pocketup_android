@@ -9,7 +9,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -18,9 +17,9 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
+import androidx.core.os.LocaleListCompat;
 import androidx.credentials.ClearCredentialStateRequest;
 import androidx.credentials.CredentialManager;
 import androidx.credentials.CredentialManagerCallback;
@@ -47,7 +46,7 @@ import retrofit2.Callback;
 
 public class SettingFragment extends Fragment {
     // Variables de las vistas
-    private TextView tvName, tvPais, tvIdioma,tvMoneda, tvTema;
+    private TextView tvName, tvPais, tvIdioma, tvMoneda, tvTema;
     private ImageView ivProfilePhoto;
 
     // datos por defecto
@@ -91,9 +90,8 @@ public class SettingFragment extends Fragment {
         MaterialButton btnLogout = view.findViewById(R.id.btn_logout);
         MaterialButton btnDeleteAccount = view.findViewById(R.id.btn_delete_account);
 
-
         //listeners de los botones
-            //cerrar sesion
+        //cerrar sesion
         btnLogout.setOnClickListener(v -> DialogUtils.mostrarDialogoConfirmacion(
                 requireContext(),
                 "Cerrar Sesión",
@@ -103,7 +101,7 @@ public class SettingFragment extends Fragment {
                 R.color.turquesa_oscuro,
                 this::ejecutarCierreSesion
         ));
-            //eliminar cuenta
+        //eliminar cuenta
         btnDeleteAccount.setOnClickListener(v -> DialogUtils.mostrarDialogoConfirmacion(
                 requireContext(),
                 "Eliminar Cuenta",
@@ -124,7 +122,6 @@ public class SettingFragment extends Fragment {
                 .enqueue(new Callback<UsuarioResponse>() {
                     @Override
                     public void onResponse(Call<UsuarioResponse> call, Response<UsuarioResponse> response) {
-                        // Ignora la respuesta si el usuario no se encuentra en la vista
                         if (!isAdded() || getContext() == null) return;
 
                         if (response.isSuccessful() && response.body() != null) {
@@ -135,13 +132,14 @@ public class SettingFragment extends Fragment {
                             String idiomaBackend = (user.getIdioma() != null && !user.getIdioma().isEmpty()) ? user.getIdioma() : "Español";
                             String monedaBackend = (user.getMoneda() != null && !user.getMoneda().isEmpty()) ? user.getMoneda() : "EUR";
 
-                            // Actualizar UI con lo que llegó del servidor
+                            // Actualizar UI
                             tvName.setText(nombreBackend);
                             tvPais.setText(paisBackend);
                             tvIdioma.setText(idiomaBackend);
                             tvMoneda.setText(monedaBackend);
+                            cargarFotoPerfil(); // Carga simple
 
-                            // Actualizar variables locales y guardar en Caché
+                            // Actualizar variables y caché
                             paisSeleccionado = paisBackend;
                             idiomaSeleccionado = idiomaBackend;
                             monedaSeleccionada = monedaBackend;
@@ -157,13 +155,20 @@ public class SettingFragment extends Fragment {
                 });
     }
 
+    // --- CARGA DE FOTO SIMPLIFICADA (Cero errores) ---
     private void cargarFotoPerfil() {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        // Si el usuario viene de Google y tiene foto, la cargamos. Si no, icono por defecto.
         if (currentUser != null && currentUser.getPhotoUrl() != null) {
             Glide.with(this)
                     .load(currentUser.getPhotoUrl())
                     .circleCrop()
-                    .placeholder(android.R.drawable.ic_menu_camera) // Si tarda en cargar, muestra la cámara
+                    .placeholder(R.drawable.ic_user_default) // Pon el nombre de tu icono por defecto real aquí
+                    .into(ivProfilePhoto);
+        } else {
+            Glide.with(this)
+                    .load(R.drawable.ic_user_default) // Pon el nombre de tu icono por defecto real aquí
+                    .circleCrop()
                     .into(ivProfilePhoto);
         }
     }
@@ -179,16 +184,14 @@ public class SettingFragment extends Fragment {
         EditText etNombre = view.findViewById(R.id.et_bottom_sheet_nombre);
         MaterialButton btnGuardar = view.findViewById(R.id.btn_bottom_sheet_guardar);
 
-        // Pre-llenar con el nombre actual
         etNombre.setText(tvName.getText().toString());
-        // Mover el cursor al final de la palabra
         etNombre.setSelection(etNombre.getText().length());
 
         btnGuardar.setOnClickListener(v -> {
             String nuevoNombre = etNombre.getText().toString().trim();
             if (!nuevoNombre.isEmpty()) {
                 tvName.setText(nuevoNombre);
-                guardarCambiosEnBackend(); // Esto actualizará Spring Boot
+                guardarCambiosEnBackend();
                 dialog.dismiss();
             } else {
                 Toast.makeText(requireContext(), "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show();
@@ -206,38 +209,41 @@ public class SettingFragment extends Fragment {
         View view = LayoutInflater.from(requireContext()).inflate(R.layout.layout_bottom_sheet_generico, null);
         dialog.setContentView(view);
 
-        // 1. Ponemos el título (Ej: "Selecciona tu País")
         TextView tvTitulo = view.findViewById(R.id.tv_bottom_sheet_titulo);
         tvTitulo.setText("Selecciona tu " + titulo);
 
-        // 2. Buscamos el contenedor vacío
         LinearLayout llOpciones = view.findViewById(R.id.ll_bottom_sheet_opciones);
 
-        // 3. Magia: Un bucle que crea las opciones dinámicamente
         for (String opcion : opciones) {
             TextView tvOpcion = new TextView(requireContext());
             tvOpcion.setText(opcion);
             tvOpcion.setTextSize(18f);
-            tvOpcion.setPadding(60, 40, 60, 40); // Espaciado interno para que sea fácil de tocar
-
-            // Le damos el efecto visual de "botón pulsable" (Ripple) nativo de Android
+            tvOpcion.setPadding(60, 40, 60, 40);
             tvOpcion.setClickable(true);
 
-            // ¿Qué pasa al hacer clic?
             tvOpcion.setOnClickListener(v -> {
                 textViewDestino.setText(opcion);
-                if (esPais) paisSeleccionado = opcion;
-                else idiomaSeleccionado = opcion;
+
+                if (esPais) {
+                    paisSeleccionado = opcion;
+                } else {
+                    idiomaSeleccionado = opcion;
+                    aplicarTraduccion(opcion);
+                }
 
                 guardarCambiosEnBackend();
                 dialog.dismiss();
             });
 
-            // Añadimos el nuevo botón al contenedor
             llOpciones.addView(tvOpcion);
         }
-
         dialog.show();
+    }
+
+    private void aplicarTraduccion(String idioma) {
+        String languageCode = (idioma.equalsIgnoreCase("Inglés") || idioma.equalsIgnoreCase("English")) ? "en" : "es";
+        LocaleListCompat appLocale = LocaleListCompat.forLanguageTags(languageCode);
+        AppCompatDelegate.setApplicationLocales(appLocale);
     }
 
     /**
@@ -263,18 +269,13 @@ public class SettingFragment extends Fragment {
             tvOpcion.setClickable(true);
 
             tvOpcion.setOnClickListener(v -> {
-                // 1. Cerramos el diálogo INMEDIATAMENTE para evitar dobles clics
                 dialog.dismiss();
-
-                // 2. Verificamos que el fragmento siga atado a la pantalla para evitar el crash
                 if (!isAdded() || getActivity() == null) return;
 
-                // 3. Guardamos la preferencia y actualizamos el texto
                 SharedPreferences prefs = requireActivity().getSharedPreferences("PreferenciasApp", MODE_PRIVATE);
                 prefs.edit().putString("temaNombre", opcion).apply();
                 tvTema.setText(opcion);
 
-                // 4. ¡LA MAGIA! Retrasamos el "reinicio" visual 200 milisegundos
                 new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                     if (index == 0) {
                         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
@@ -290,9 +291,6 @@ public class SettingFragment extends Fragment {
         dialog.show();
     }
 
-    /**
-     * Este método lo dejaremos preparado para la Fase 2 (Conexión a Spring Boot)
-     */
     private void guardarCambiosEnBackend() {
         SessionManager sessionManager = new SessionManager(requireContext());
         Long usuarioId = sessionManager.getUsuarioId();
@@ -313,8 +311,6 @@ public class SettingFragment extends Fragment {
                         if (response.isSuccessful()) {
                             Toast.makeText(getContext(), "Perfil actualizado", Toast.LENGTH_SHORT).show();
                             sessionManager.crearSesion(usuarioId, nuevoNombre);
-
-                            // ¡NUEVA LÍNEA VITAL!: Guardamos los cambios en la caché para la próxima vez
                             guardarAjustesEnCache(nuevoNombre, paisSeleccionado, idiomaSeleccionado, monedaSeleccionada);
                         } else {
                             Toast.makeText(getContext(), "Error al guardar los cambios", Toast.LENGTH_SHORT).show();
@@ -326,43 +322,24 @@ public class SettingFragment extends Fragment {
                     }
                 });
     }
-    /**
-     * Abre un Bottom Sheet moderno para seleccionar la moneda
-     */
+
     private void mostrarBottomSheetMoneda() {
-        // 1. Crear el componente BottomSheet
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(requireContext());
-
-        // 2. Inflar el diseño que creamos en el paso anterior
-        View bottomSheetView = LayoutInflater.from(requireContext())
-                .inflate(R.layout.layout_bottom_sheet_moneda, null);
-
+        View bottomSheetView = LayoutInflater.from(requireContext()).inflate(R.layout.layout_bottom_sheet_moneda, null);
         bottomSheetDialog.setContentView(bottomSheetView);
 
-        // 3. Configurar los clics de cada opción dentro del Bottom Sheet
-        bottomSheetView.findViewById(R.id.opcion_eur).setOnClickListener(v -> {
-            actualizarMoneda("EUR", bottomSheetDialog);
-        });
+        bottomSheetView.findViewById(R.id.opcion_eur).setOnClickListener(v -> actualizarMoneda("EUR", bottomSheetDialog));
+        bottomSheetView.findViewById(R.id.opcion_usd).setOnClickListener(v -> actualizarMoneda("USD", bottomSheetDialog));
+        bottomSheetView.findViewById(R.id.opcion_cop).setOnClickListener(v -> actualizarMoneda("COP", bottomSheetDialog));
 
-        bottomSheetView.findViewById(R.id.opcion_usd).setOnClickListener(v -> {
-            actualizarMoneda("USD", bottomSheetDialog);
-        });
-
-        bottomSheetView.findViewById(R.id.opcion_cop).setOnClickListener(v -> {
-            actualizarMoneda("COP", bottomSheetDialog);
-        });
-
-        // 4. Mostrarlo en pantalla
         bottomSheetDialog.show();
     }
-    /**
-     * Método auxiliar para evitar repetir código en los clics
-     */
+
     private void actualizarMoneda(String codigoMoneda, BottomSheetDialog dialog) {
         monedaSeleccionada = codigoMoneda;
         tvMoneda.setText(codigoMoneda);
-        guardarCambiosEnBackend(); // Manda el cambio a Spring Boot
-        dialog.dismiss(); // Cierra el menú hacia abajo
+        guardarCambiosEnBackend();
+        dialog.dismiss();
     }
 
     private void ejecutarCierreSesion() {
@@ -392,13 +369,12 @@ public class SettingFragment extends Fragment {
         SessionManager sessionManager = new SessionManager(requireContext());
         Long usuarioId = sessionManager.getUsuarioId();
         if (usuarioId == -1L) return;
-        // 1. Llamada al Backend
+
         RetrofitClient.getApiService().eliminarCuenta(usuarioId).enqueue(new retrofit2.Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
                 if (!isAdded() || getContext() == null) return;
                 if (response.isSuccessful()) {
-                    // 2. Si el backend borró con éxito, limpiamos rastro local
                     eliminarRastroYSalir();
                     Toast.makeText(requireContext(), "Tu cuenta ha sido eliminada. Lamentamos verte partir.", Toast.LENGTH_LONG).show();
                 } else {
@@ -407,47 +383,36 @@ public class SettingFragment extends Fragment {
             }
             @Override
             public void onFailure(Call<Map<String, Object>> call, Throwable t) {
-                if (!isAdded() || getContext() == null) return; // ESCUDO
+                if (!isAdded() || getContext() == null) return;
                 Toast.makeText(getContext(), "Fallo de conexión", Toast.LENGTH_SHORT).show();
             }
         });
     }
+
     private void eliminarRastroYSalir() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
-            // 1. Intentamos borrar al usuario de Firebase Auth
             user.delete().addOnCompleteListener(task -> {
                 if (task.isSuccessful()) {
                     Log.d("DeleteAccount", "Usuario eliminado de Firebase.");
                 } else {
-                    // Si falla (ej: requiere login reciente), al menos cerramos sesión
                     Log.e("DeleteAccount", "No se pudo borrar de Firebase, haciendo SignOut.");
                     FirebaseAuth.getInstance().signOut();
                 }
-                // 2. Independientemente del resultado de Firebase, limpiamos lo local
                 completarLimpiezaYRedirigir();
             });
         } else {
-            // Si por alguna razón no hay usuario en Firebase, limpiamos lo demás
             completarLimpiezaYRedirigir();
         }
     }
 
-
-    /**
-     * Limpia SharedPreferences, Firebase y redirige al Login
-     */
     private void completarLimpiezaYRedirigir() {
-        // Limpiar SharedPreferences (SessionManager)
-        // 1. Limpiar el archivo de sesión (ID, Nombre, etc.)
         SessionManager sessionManager = new SessionManager(requireContext());
         sessionManager.cerrarSesion();
 
-        //Limpiar el archivo específico del Login
         SharedPreferences loginPrefs = requireContext().getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE);
         loginPrefs.edit().clear().apply();
 
-        // Limpiar el estado de las credenciales de Google
         CredentialManager credentialManager = CredentialManager.create(requireContext());
         credentialManager.clearCredentialStateAsync(new ClearCredentialStateRequest(), null,
                 ContextCompat.getMainExecutor(requireContext()), new CredentialManagerCallback<Void, ClearCredentialException>() {
@@ -466,19 +431,16 @@ public class SettingFragment extends Fragment {
         SharedPreferences prefs = requireActivity().getSharedPreferences("PreferenciasApp", MODE_PRIVATE);
         SessionManager sessionManager = new SessionManager(requireContext());
 
-        // 1. Leer valores de la caché (con valores por defecto si está vacío)
         String nombreCache = prefs.getString("nombre", sessionManager.getUsuarioNombre());
         paisSeleccionado = prefs.getString("pais", "España");
         idiomaSeleccionado = prefs.getString("idioma", "Español");
         monedaSeleccionada = prefs.getString("moneda", "EUR");
 
-        // 2. Pintar en la pantalla al instante
         tvName.setText(nombreCache);
         tvPais.setText(paisSeleccionado);
         tvIdioma.setText(idiomaSeleccionado);
         tvMoneda.setText(monedaSeleccionada);
 
-        // 3. La foto de perfil ya es rápida porque Glide usa su propia caché
         cargarFotoPerfil();
     }
 

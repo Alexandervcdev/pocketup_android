@@ -7,11 +7,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -32,22 +34,43 @@ public class RegisterActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SharedPreferences prefs = getSharedPreferences("PreferenciasApp", MODE_PRIVATE);
+        String tema = prefs.getString("temaNombre", "Predeterminado");
+
+        if (tema.equals("Claro")) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else if (tema.equals("Oscuro")) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        }
+
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_register);
+
+        // LOGO DINÁMICO (Justo después de cargar la vista)
+        ImageView ivLogo = findViewById(R.id.iv_register_logo);
+        int nightModeFlags = getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+
+        if (nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES) {
+            ivLogo.setImageResource(R.drawable.logo_blanco);
+        } else {
+            ivLogo.setImageResource(R.drawable.logo);
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
-        // Vincular componentes de la vista
+        // Vincular componentes
         etNombre = findViewById(R.id.ed_register_name);
         etEmail = findViewById(R.id.ed_register_email);
         etPassword = findViewById(R.id.ed_register_pass);
         btnRegistrar = findViewById(R.id.bt_register_submit);
 
-        //metodos
         loginClickListener();
         btnRegistrar.setOnClickListener(v -> ejecutarRegistro());
     }
