@@ -53,4 +53,6 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     // Converter GSON: Para que Retrofit convierta el JSON de Spring a objetos Java automáticamente
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    //Libreria para gráficos
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 }

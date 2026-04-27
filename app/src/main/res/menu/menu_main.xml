@@ -7,17 +7,17 @@
         android:icon="@drawable/ic_home"
         android:title="@string/Main" />
     <item
-        android:id="@+id/nav_planificacion"
+        android:id="@+id/nav_estadisticas"
         android:icon="@drawable/ic_chart"
-        android:title="@string/planifica" />
+        android:title="Estadisticas" />
     <item
         android:id="@+id/nav_character"
         android:icon="@drawable/ic_person"
         android:title="@string/Character" />
     <item
-        android:id="@+id/nav_note"
+        android:id="@+id/nav_planificacion"
         android:icon="@drawable/ic_note"
-        android:title="@string/notes" />
+        android:title="@string/planifica" />
     <item
         android:id="@+id/nav_setting"
         android:icon="@drawable/ic_settings"
