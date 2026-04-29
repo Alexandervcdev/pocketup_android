@@ -16,10 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
-
 import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.android.material.button.MaterialButton;
 import com.pocketupdm.R;
 import com.pocketupdm.adapter.MovimientoAdapter;
 import com.pocketupdm.dialogs.MovimientoBottomSheet;
@@ -28,7 +25,10 @@ import com.pocketupdm.model.MovementType;
 import com.pocketupdm.dto.MovimientoRequest;
 import com.pocketupdm.dto.MovimientoResponse;
 import com.pocketupdm.network.RetrofitClient;
+import com.pocketupdm.utils.NavigationUtil;
+import com.pocketupdm.utils.NotificacionUI;
 import com.pocketupdm.utils.SessionManager;
+import com.pocketupdm.utils.StringUtils;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -75,7 +75,7 @@ public class HomeFragment extends Fragment {
 
         // 2. Mensaje de bienvenida
         TextView tvWelcome = view.findViewById(R.id.tv_welcome);
-        tvWelcome.setText("¡Hola, " + sessionManager.getUsuarioNombre() + "!");
+        tvWelcome.setText("¡Hola, " + StringUtils.LetraMayuscula(sessionManager.getUsuarioNombre()) + "!");
 
         // 3. Subtítulo dinámico con el mes actual
         TextView tvSubtitle = view.findViewById(R.id.tv_subtitle);
@@ -236,8 +236,8 @@ public class HomeFragment extends Fragment {
     private void enviarMovimientoAlBackend(BigDecimal importe, String nota, MovementType tipo, String fecha,Long categoriaId) {
         Long usuarioId = sessionManager.getUsuarioId();
         if (usuarioId == -1L) {
-            Toast.makeText(getContext(), "Error: Sesión no válida", Toast.LENGTH_SHORT).show();
-            com.pocketupdm.utils.NavigationUtil.irALogin(getActivity());
+            NotificacionUI.mostrarError(getActivity(), "Error: Sesión no válida");
+            NavigationUtil.irALogin(getActivity());
             return;
         }
         MovimientoRequest request = new MovimientoRequest(importe, fecha, tipo, nota, usuarioId,categoriaId);
@@ -248,17 +248,41 @@ public class HomeFragment extends Fragment {
                 if (!isAdded() || getContext() == null) return;
 
                 if (response.isSuccessful() && response.body() != null) {
-                    Toast.makeText(getContext(), "¡" + tipo.name() + " guardado!", Toast.LENGTH_SHORT).show();
+                    int xpGanada;
+                    String nombreMovimiento;
+                    int iconoNotificacion;
+                    int colorNotificacion;
+
+                    if (tipo == MovementType.INGRESO) {
+                        xpGanada = 20;
+                        nombreMovimiento = "Ingreso";
+                        iconoNotificacion = R.drawable.ic_ingreso;
+                        colorNotificacion = R.color.turquesa_dinamico;
+                    } else {
+                        xpGanada = 10;
+                        nombreMovimiento = "Gasto";
+                        iconoNotificacion = R.drawable.ic_spent;
+                        colorNotificacion = R.color.red;
+                    }
+
+                    // 2. Mostramos la notificación con las variables que acabamos de definir
+                    NotificacionUI.mostrar(
+                            getActivity(),
+                            "¡" + nombreMovimiento + " guardado!",
+                            "Has ganado +" + xpGanada + " XP. ¡A por el siguiente nivel!",
+                            iconoNotificacion,
+                            colorNotificacion
+                    );
                     cargarDatosHome();
                 } else {
-                    Toast.makeText(getContext(), "Error al guardar. Revisa conexión.", Toast.LENGTH_LONG).show();
+                    NotificacionUI.mostrarError(getActivity(), "Error al guardar "+tipo+" revisa tu conexión e inténtalo de nuevo.");
                 }
             }
 
             @Override
             public void onFailure(Call<MovimientoResponse> call, Throwable t) {
                 if (!isAdded() || getContext() == null) return;
-                Toast.makeText(getContext(), "Fallo de conexión", Toast.LENGTH_LONG).show();
+                NotificacionUI.mostrarError(getActivity(), "Fallo de conexión con el servidor.");
             }
         });
     }

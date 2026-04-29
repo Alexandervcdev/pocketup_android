@@ -119,7 +119,6 @@
             android:layout_height="wrap_content"
             android:text="Editar"
             android:textColor="?attr/colorOnSurface"
-            app:icon="@android:drawable/ic_input_add"
             app:iconTint="?attr/colorOnSurface" />
 
     </LinearLayout>

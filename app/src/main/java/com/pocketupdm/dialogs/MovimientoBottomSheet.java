@@ -3,6 +3,7 @@ package com.pocketupdm.dialogs;
 import static com.pocketupdm.utils.DialogUtils.mostrarDialogoConfirmacion;
 
 import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
@@ -33,9 +35,11 @@ import com.pocketupdm.model.Meta;
 import com.pocketupdm.model.MovementType;
 import com.pocketupdm.model.Presupuesto;
 import com.pocketupdm.network.RetrofitClient;
+import com.pocketupdm.utils.DialogUtils;
 import com.pocketupdm.utils.SessionManager;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -49,38 +53,48 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * Esta clase se utiliza para la creación de nuevos Movimientos (Ingresos o Gastos).
+ * Gestiona la selección de categorías, asignación a metas y alertas de presupuestos.
+ */
 public class MovimientoBottomSheet extends BottomSheetDialogFragment {
 
     private MovementType tipo;
     private OnMovimientoGuardadoListener listener;
-    private String fechaSeleccionada; // Formato YYYY-MM-DD para la API
+    private String fechaSeleccionada; // Formato YYYY-MM-DD para enviar a la API
 
-    // VARIABLES PARA CATEGORÍAS
+    // --- VARIABLES DE CATEGORÍAS ---
     private RecyclerView rvCategorias;
     private CategoriaAdapter categoriaAdapter;
     private Long categoriaSeleccionadaId = null;
-    private SessionManager sessionManager;
-
     private boolean isModoEdicionCategorias = false;
     private MaterialButton btnEditarToggle;
 
-    // VARIABLES PARA METAS
+    // --- VARIABLES DE METAS ---
     private LinearLayout llAsignarMeta;
     private MaterialSwitch switchAsignarMeta;
-
     private RecyclerView rvMetasSelector;
-
     private List<Meta> metasDisponibles;
     private Long metaSeleccionadaId = null;
 
+    // --- VARIABLES DE PRESUPUESTOS ---
     private TextView tvAdvertenciaPresupuesto;
     private List<Presupuesto> presupuestosUsuario = new ArrayList<>();
 
-    // Interfaz para avisarle al HomeFragment que se guardó un dato
+    private SessionManager sessionManager;
+
+    /**
+     * Interfaz de comunicación para devolver los datos validados a la pantalla Home (u otra).
+     */
     public interface OnMovimientoGuardadoListener {
         void onGuardar(BigDecimal importe, String nota, MovementType tipo, String fecha, Long categoriaId);
     }
 
+    /**
+     * Constructor del BottomSheet.
+     * @param tipo INGRESO o GASTO. Determina el color y los campos visibles (ej. Metas).
+     * @param listener Callback para enviar los datos una vez validados.
+     */
     public MovimientoBottomSheet(MovementType tipo, OnMovimientoGuardadoListener listener) {
         this.tipo = tipo;
         this.listener = listener;
@@ -98,49 +112,46 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
 
         sessionManager = new SessionManager(requireContext());
 
-        // --- 1. CONFIGURACIÓN DE VISTAS ---
+        // --- CONFIGURACIÓN DE VISTAS ---
         rvCategorias = view.findViewById(R.id.rv_categorias_selector);
         rvCategorias.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         btnEditarToggle = view.findViewById(R.id.btn_editar_categorias_toggle);
 
         llAsignarMeta = view.findViewById(R.id.ll_asignar_meta);
         switchAsignarMeta = view.findViewById(R.id.switch_asignar_meta);
-        llAsignarMeta = view.findViewById(R.id.ll_asignar_meta);
-        switchAsignarMeta = view.findViewById(R.id.switch_asignar_meta);
-
-        // NUEVO: Enlazar el RecyclerView
         rvMetasSelector = view.findViewById(R.id.rv_metas_selector);
         rvMetasSelector.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+
         tvAdvertenciaPresupuesto = view.findViewById(R.id.tv_advertencia_presupuesto_movimiento);
 
-        // --- 2. CARGAS INICIALES ---
+        // --- CARGAS INICIALES (Llamadas al Backend) ---
         cargarCategoriasDesdeBackend();
         cargarMetasDelUsuario(); 
         cargarPresupuestosDelUsuario();
 
-        // --- 3. LÓGICA DEL INTERRUPTOR DE METAS ---
+        // --- LÓGICA DEL INTERRUPTOR DE METAS ---
         switchAsignarMeta.setOnCheckedChangeListener((buttonView, isChecked) -> {
             rvMetasSelector.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             if (isChecked) {
                 filtrarYMostrarMetas();
             } else {
                 metaSeleccionadaId = null;
-                rvMetasSelector.setAdapter(null); // Limpiamos la selección
+                rvMetasSelector.setAdapter(null);
             }
         });
 
-        // --- 4. LÓGICA DE CATEGORÍAS (Edición y Creación) ---
+        // --- LÓGICA DE EDICIÓN DE CATEGORÍAS ---
         btnEditarToggle.setOnClickListener(v -> {
             isModoEdicionCategorias = !isModoEdicionCategorias;
             if (isModoEdicionCategorias) {
                 btnEditarToggle.setText("Cancelar");
-                btnEditarToggle.setIconTint(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.red)));
                 btnEditarToggle.setTextColor(ContextCompat.getColor(requireContext(), R.color.red));
                 Toast.makeText(getContext(), "Toca una categoría para ver opciones", Toast.LENGTH_SHORT).show();
             } else {
                 btnEditarToggle.setText("Editar");
-                btnEditarToggle.setIconTint(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), android.R.color.darker_gray)));
-                btnEditarToggle.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.darker_gray));
+                int colorOnSurface = MaterialColors.getColor(requireView(), com.google.android.material.R.attr.colorOnSurface);
+                btnEditarToggle.setIconTint(ColorStateList.valueOf(colorOnSurface));
+                btnEditarToggle.setTextColor(colorOnSurface);
             }
         });
 
@@ -151,7 +162,7 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
             bottomSheet.show(getParentFragmentManager(), "NuevaCategoria");
         });
 
-        // --- 5. LÓGICA DE FORMULARIO (Fecha y Textos) ---
+        // --- CONFIGURACIÓN DEL FORMULARIO Y FECHA ---
         TextView tvTitulo = view.findViewById(R.id.tv_titulo_sheet);
         TextInputEditText etImporte = view.findViewById(R.id.et_importe);
         TextInputEditText etFecha = view.findViewById(R.id.et_fecha);
@@ -177,7 +188,7 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
                 fechaSeleccionada = sdfApi.format(utc.getTime());
                 etFecha.setText(sdfVisual.format(utc.getTime()));
 
-                // Si cambia la fecha y el switch está activo, hay que recalcular las metas disponibles
+                // Recalcular metas si cambia la fecha y el switch está activo
                 if (switchAsignarMeta.isChecked()) {
                     filtrarYMostrarMetas();
                 }
@@ -185,22 +196,65 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
             datePicker.show(getParentFragmentManager(), "DATE_PICKER");
         });
 
-        // ¡MAGIA VISUAL! Cambiamos los colores según el tipo de movimiento
+        // ---  COLOREADO DINÁMICO (INGRESO VS GASTO) ---
+        TextInputLayout tilImporte = view.findViewById(R.id.til_importe);
+        TextInputLayout tilFecha = view.findViewById(R.id.til_fecha);
+        TextInputLayout tilNota = view.findViewById(R.id.til_nota);
+
         if (tipo == MovementType.INGRESO) {
             tvTitulo.setText("Nuevo Ingreso");
             tvTitulo.setTextColor(ContextCompat.getColor(requireContext(), R.color.turquesa_oscuro));
-            llAsignarMeta.setVisibility(View.VISIBLE); // Mostrar sección de metas
+            llAsignarMeta.setVisibility(View.VISIBLE);
             btnGuardar.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.turquesa_oscuro)));
-        } else {
+
+            // Configurar colores del Switch de Metas a Turquesa
+            int colorTurquesa = ContextCompat.getColor(requireContext(), R.color.turquesa_oscuro);
+            int colorGris = ContextCompat.getColor(requireContext(), android.R.color.darker_gray);
+            ColorStateList thumbStates = new ColorStateList(
+                    new int[][]{
+                            new int[]{android.R.attr.state_checked},
+                            new int[]{-android.R.attr.state_checked}
+                    },
+                    new int[]{
+                            colorTurquesa,
+                            colorGris
+                    }
+            );
+            // Configurar colores del Switch de Metas a Turquesa
+            ColorStateList trackStates = new ColorStateList(
+                    new int[][]{
+                            new int[]{android.R.attr.state_checked},
+                            new int[]{-android.R.attr.state_checked}
+                    },
+                    new int[]{
+                            androidx.core.graphics.ColorUtils.setAlphaComponent(colorTurquesa, 120),
+                            androidx.core.graphics.ColorUtils.setAlphaComponent(colorGris, 100)
+                    }
+            );
+            switchAsignarMeta.setThumbTintList(thumbStates);
+            switchAsignarMeta.setTrackTintList(trackStates);
+
+            // Bordes turquesa
+            if (tilImporte != null) tilImporte.setBoxStrokeColor(colorTurquesa);
+            if (tilFecha != null) tilFecha.setBoxStrokeColor(colorTurquesa);
+            if (tilNota != null) tilNota.setBoxStrokeColor(colorTurquesa);
+
+        }else {
             tvTitulo.setText("Nuevo Gasto");
-            llAsignarMeta.setVisibility(View.GONE); // Ocultar sección de metas
+            llAsignarMeta.setVisibility(View.GONE);
             switchAsignarMeta.setChecked(false);
             metaSeleccionadaId = null;
             tvTitulo.setTextColor(ContextCompat.getColor(requireContext(), R.color.red));
             btnGuardar.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.red)));
+
+            // Bordes rojos
+            int colorRojo = ContextCompat.getColor(requireContext(), R.color.red);
+            if (tilImporte != null) tilImporte.setBoxStrokeColor(colorRojo);
+            if (tilFecha != null) tilFecha.setBoxStrokeColor(colorRojo);
+            if (tilNota != null) tilNota.setBoxStrokeColor(colorRojo);
         }
 
-        // --- 6. ACCIÓN DE GUARDAR ---
+        // --- ACCIÓN DE GUARDAR ---
         btnGuardar.setOnClickListener(v -> {
             String importeStr = etImporte.getText().toString().trim();
             String notaStr = etNota.getText().toString().trim();
@@ -215,17 +269,16 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
                 if (notaStr.isEmpty()) notaStr = "Sin nota";
                 if (categoriaSeleccionadaId == null) { Toast.makeText(getContext(), "Selecciona una categoría", Toast.LENGTH_SHORT).show(); return; }
 
-                // VERIFICACIÓN DE LA META: Si encendió el switch, debe haber elegido una meta
+                // Verificación de Meta en caso de Ingreso
                 if (tipo == MovementType.INGRESO && switchAsignarMeta.isChecked()) {
                     if (metaSeleccionadaId == null) {
                         Toast.makeText(getContext(), "Selecciona una meta en el menú desplegable", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    // Disparamos la llamada silenciosa al backend para sumar el dinero a la meta
                     aportarDineroAMetaSilenciosamente(metaSeleccionadaId, importe);
                 }
 
-                // Guardamos el movimiento de forma normal
+                // Disparar el callback hacia el Fragment padre y cerrar el diálogo
                 listener.onGuardar(importe, notaStr, tipo, fechaSeleccionada, categoriaSeleccionadaId);
                 dismiss();
 
@@ -235,6 +288,12 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
+    // MÉTODOS DE BACKEND Y LÓGICA DE NEGOCIO
+
+    /**
+     * Descarga los presupuestos activos del usuario de forma silenciosa.
+     * Se usarán después para validar si el gasto supera algún límite.
+     */
     private void cargarPresupuestosDelUsuario() {
         RetrofitClient.getApiService().obtenerPresupuestos(sessionManager.getUsuarioId()).enqueue(new Callback<List<com.pocketupdm.model.Presupuesto>>() {
             @Override
@@ -248,11 +307,9 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
-    // ========================================================
-    // MÉTODOS DE BACKEND Y LÓGICA DE NEGOCIO
-    // ========================================================
-
-    // 1. Carga inicial de metas
+    /**
+     * Descarga todas las metas del usuario para rellenar el selector horizontal.
+     */
     private void cargarMetasDelUsuario() {
         RetrofitClient.getApiService().obtenerMetas(sessionManager.getUsuarioId()).enqueue(new Callback<List<Meta>>() {
             @Override
@@ -266,22 +323,21 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
-    // 2. Filtrado de fechas (Core UI)
+    /**
+     * Filtra las metas disponibles para mostrar únicamente aquellas cuya
+     * fecha límite es igual o posterior a la fecha seleccionada en el formulario.
+     */
     private void filtrarYMostrarMetas() {
         if (metasDisponibles == null || metasDisponibles.isEmpty()) {
             Toast.makeText(getContext(), "No tienes metas activas", Toast.LENGTH_SHORT).show();
             switchAsignarMeta.setChecked(false);
             return;
         }
-
-        List<String> nombresMetasValidas = new ArrayList<>();
-        final List<Meta> metasValidas = new ArrayList<>();
+        List<Meta> metasValidas = new ArrayList<>();
 
         for (Meta meta : metasDisponibles) {
-            // Solo metas cuya fecha límite es >= a la fecha seleccionada del ingreso
             if (meta.getFechaLimite().compareTo(fechaSeleccionada) >= 0) {
                 metasValidas.add(meta);
-                nombresMetasValidas.add(meta.getNombre());
             }
         }
 
@@ -291,82 +347,87 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
             return;
         }
 
-        // NUEVO: Usamos tu MetaSelectorAdapter
-        com.pocketupdm.adapter.MetaSelectorAdapter adapter = new MetaSelectorAdapter(getContext(), metasValidas, meta -> {
-            metaSeleccionadaId = meta.getId(); // Guardamos el ID cuando toca la tarjeta
+        MetaSelectorAdapter adapter = new MetaSelectorAdapter(getContext(), metasValidas, meta -> {
+            metaSeleccionadaId = meta.getId();
         });
         rvMetasSelector.setAdapter(adapter);
     }
 
-    // 3. Aportar a la meta (Llamada paralela)
+    /**
+     * Envía una petición PUT al servidor para sumar el importe directamente a la meta seleccionada.
+     * Al ser silenciosa, no bloquea al usuario ni muestra Toasts de carga.
+     * @param idMeta ID de la meta destino
+     * @param cantidad Cantidad del ingreso
+     */
     private void aportarDineroAMetaSilenciosamente(Long idMeta, BigDecimal cantidad) {
         Map<String, BigDecimal> payload = new HashMap<>();
         payload.put("cantidad", cantidad);
 
         RetrofitClient.getApiService().agregarFondosMeta(idMeta, payload).enqueue(new Callback<Meta>() {
-            @Override public void onResponse(Call<Meta> call, Response<Meta> response) { /* Éxito silencioso */ }
-            @Override public void onFailure(Call<Meta> call, Throwable t) { /* Fallo silencioso */ }
+            @Override public void onResponse(Call<Meta> call, Response<Meta> response) { }
+            @Override public void onFailure(Call<Meta> call, Throwable t) { }
         });
     }
 
-    // ... (Mantengo intactos tus métodos de cargarCategoriasDesdeBackend y eliminarCategoriaEnBackend) ...
+    /**
+     * Descarga y pinta la lista de categorías (Base + Personalizadas).
+     * También incluye la lógica de Presupuestos (Semáforo de gastos).
+     */
     private void cargarCategoriasDesdeBackend() {
         RetrofitClient.getApiService().obtenerCategorias(sessionManager.getUsuarioId()).enqueue(new Callback<List<Categoria>>() {
             @Override
             public void onResponse(Call<List<Categoria>> call, Response<List<Categoria>> response) {
+                if (!isAdded() || getContext() == null) return;
+
                 if (response.isSuccessful() && response.body() != null) {
                     categoriaAdapter = new CategoriaAdapter(getContext(), response.body(), categoria -> {
 
                         if (isModoEdicionCategorias) {
-                            // === MODO EDICIÓN ACTIVADO ===
+                            // --- MODO EDICIÓN ---
                             if (categoria.getUsuarioId() == null) {
                                 Toast.makeText(getContext(), "Las categorías del sistema no se pueden modificar", Toast.LENGTH_SHORT).show();
                                 return;
                             }
-                            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                                    .setTitle(categoria.getNombre())
-                                    .setItems(new String[]{"Editar", "Eliminar"}, (dialog, which) -> {
-                                        if (which == 0) abrirEditorCategoria(categoria);
-                                        else confirmarEliminacion(categoria);
-                                        btnEditarToggle.performClick();
-                                    }).show();
+                            DialogUtils.mostrarDialogoOpciones(
+                                    requireContext(),
+                                    "Opciones",
+                                    new String[]{"Editar", "Eliminar"},
+                                    (indice, opcion) -> {
+                                        if (indice == 0) abrirEditorCategoria(categoria);
+                                        else if (indice == 1) confirmarEliminacion(categoria);
+                                        btnEditarToggle.performClick(); // Apagar modo edición
+                                    }
+                            );
                         } else {
-                            // === MODO NORMAL (Seleccionar para el movimiento) ===
+                            // --- MODO SELECCIÓN (Semáforo de Presupuestos) ---
                             categoriaSeleccionadaId = categoria.getId();
+                            if (tvAdvertenciaPresupuesto != null) tvAdvertenciaPresupuesto.setVisibility(View.GONE);
 
-                            // 1. Ocultamos el aviso por defecto cada vez que tocamos una categoría
-                            if (tvAdvertenciaPresupuesto != null) {
-                                tvAdvertenciaPresupuesto.setVisibility(View.GONE);
-                            }
-
-                            // 2. SI ES UN GASTO, COMPROBAMOS EL SEMÁFORO DEL PRESUPUESTO
                             if (tipo == MovementType.GASTO && presupuestosUsuario != null) {
-                                for (com.pocketupdm.model.Presupuesto p : presupuestosUsuario) {
-                                    // Buscamos si esta categoría tiene un presupuesto asociado
+                                for (Presupuesto p : presupuestosUsuario) {
                                     if (p.getCategoria() != null && p.getCategoria().getId().equals(categoria.getId())) {
 
                                         BigDecimal gastado = p.getMontoGastado() != null ? p.getMontoGastado() : BigDecimal.ZERO;
                                         BigDecimal limite = p.getMontoLimite();
 
                                         if (limite.compareTo(BigDecimal.ZERO) > 0) {
-                                            // Calculamos el porcentaje
-                                            int porcentaje = gastado.divide(limite, 2, java.math.RoundingMode.HALF_UP).multiply(new BigDecimal("100")).intValue();
+                                            int porcentaje = gastado.divide(limite, 2, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).intValue();
 
                                             if (porcentaje >= 100) {
                                                 // ROJO: Límite Superado
                                                 tvAdvertenciaPresupuesto.setText("¡Cuidado! Ya superaste tu límite de " + p.getCategoria().getNombre() + " (" + porcentaje + "%).");
-                                                tvAdvertenciaPresupuesto.setTextColor(android.graphics.Color.RED);
-                                                tvAdvertenciaPresupuesto.setBackgroundColor(android.graphics.Color.parseColor("#1AFF0000")); // Fondo rojo transparente
+                                                tvAdvertenciaPresupuesto.setTextColor(Color.RED);
+                                                tvAdvertenciaPresupuesto.setBackgroundColor(Color.parseColor("#1AFF0000"));
                                                 tvAdvertenciaPresupuesto.setVisibility(View.VISIBLE);
                                             } else if (porcentaje >= 75) {
                                                 // NARANJA: Alerta de cercanía
                                                 tvAdvertenciaPresupuesto.setText("Aviso: Has consumido el " + porcentaje + "% de tu presupuesto en " + p.getCategoria().getNombre() + ".");
-                                                tvAdvertenciaPresupuesto.setTextColor(android.graphics.Color.parseColor("#FF9800")); // Naranja Material
-                                                tvAdvertenciaPresupuesto.setBackgroundColor(android.graphics.Color.parseColor("#1AFFE0B2")); // Fondo naranja transparente
+                                                tvAdvertenciaPresupuesto.setTextColor(Color.parseColor("#FF9800"));
+                                                tvAdvertenciaPresupuesto.setBackgroundColor(Color.parseColor("#1AFFE0B2"));
                                                 tvAdvertenciaPresupuesto.setVisibility(View.VISIBLE);
                                             }
                                         }
-                                        break; // Ya evaluamos esta categoría, salimos del bucle
+                                        break;
                                     }
                                 }
                             }
@@ -379,6 +440,10 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
+    /**
+     * Elimina permanentemente una categoría personalizada.
+     * Los movimientos huérfanos se reasignan en el Backend a la categoría general.
+     */
     private void eliminarCategoriaEnBackend(Long idCategoria) {
         RetrofitClient.getApiService().eliminarCategoria(idCategoria).enqueue(new Callback<Void>() {
             @Override

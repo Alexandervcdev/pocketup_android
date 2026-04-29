@@ -1,6 +1,7 @@
 package com.pocketupdm.controller;
 import com.pocketupdm.dto.MovimientoRequest;
 import com.pocketupdm.dto.MovimientoResponse;
+import com.pocketupdm.dto.PersonajeResponse;
 import com.pocketupdm.dto.UsuarioLoginRequest;
 import com.pocketupdm.dto.UsuarioRegistroRequest;
 import com.pocketupdm.dto.UsuarioResponse;
@@ -22,6 +23,7 @@ import retrofit2.http.HTTP;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 public interface ApiService {
 
@@ -93,4 +95,11 @@ public interface ApiService {
     // Endpoint especial para añadir dinero a la hucha sin enviar todo el objeto
     @PUT("metas/{id}/add-fondos")
     Call<Meta> agregarFondosMeta(@Path("id") Long id, @Body Map<String, BigDecimal> payload);
+
+    //PERSONAJES
+    @GET("personaje/{usuarioId}")
+    Call<PersonajeResponse> obtenerPersonaje(@Path("usuarioId") Long usuarioId);
+
+    @PUT("personaje/{usuarioId}/skin")
+    Call<PersonajeResponse> cambiarSkin(@Path("usuarioId") Long usuarioId, @Query("nuevaSkin") Integer nuevaSkin);
 }
