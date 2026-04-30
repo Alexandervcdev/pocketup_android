@@ -59,33 +59,34 @@ public class MetaAdapter extends RecyclerView.Adapter<MetaAdapter.MetaViewHolder
     public void onBindViewHolder(@NonNull MetaViewHolder holder, int position) {
         Meta meta = listaMetas.get(position);
 
+        // Comprobamos si la meta ya llegó al 100%
+        boolean estaCompletada = meta.getMontoActual().compareTo(meta.getMontoObjetivo()) >= 0;
+
         // 1. Textos Básico
         holder.tvNombre.setText(meta.getNombre());
 
         // 2. Formato de Moneda
-        NumberFormat formatoMoneda = NumberFormat.getCurrencyInstance(new Locale("es", "ES"));
+        java.text.NumberFormat formatoMoneda = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("es", "ES"));
         String acumuladoStr = formatoMoneda.format(meta.getMontoActual());
         String objetivoStr = formatoMoneda.format(meta.getMontoObjetivo());
         holder.tvProgresoTexto.setText(acumuladoStr + " de " + objetivoStr);
 
         // 3. Matemáticas de la Barra de Progreso
-        // Calculamos el porcentaje: (Actual / Objetivo) * 100
         int porcentaje = 0;
         if (meta.getMontoObjetivo().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal division = meta.getMontoActual().divide(meta.getMontoObjetivo(), 4, RoundingMode.HALF_UP);
+            BigDecimal division = meta.getMontoActual().divide(meta.getMontoObjetivo(), 4, java.math.RoundingMode.HALF_UP);
             porcentaje = division.multiply(new BigDecimal("100")).intValue();
         }
 
-        // Aseguramos que no pase de 100% visualmente
         if (porcentaje > 100) porcentaje = 100;
 
         holder.pbProgreso.setProgress(porcentaje);
         holder.tvPorcentaje.setText(porcentaje + "%");
 
-        // 4. Fechas (Lógica básica, luego podemos poner "Faltan X días")
+        // 4. Fechas
         holder.tvFecha.setText("Límite: " + meta.getFechaLimite());
 
-        // 5. ¡LA MAGIA VISUAL DE LAS BURBUJAS! (Reciclada de tus Categorías)
+        // 5. Magia visual de iconos
         int colorMeta;
         try {
             colorMeta = Color.parseColor(meta.getColor());
@@ -100,20 +101,27 @@ public class MetaAdapter extends RecyclerView.Adapter<MetaAdapter.MetaViewHolder
             holder.ivIcono.setImageResource(android.R.drawable.ic_menu_agenda);
         }
 
-        // Pintamos el icono y creamos el fondo transparente al 20%
         int colorFondoClarito = Color.argb(40, Color.red(colorMeta), Color.green(colorMeta), Color.blue(colorMeta));
         holder.cardIcono.setCardBackgroundColor(colorFondoClarito);
         holder.ivIcono.setColorFilter(colorMeta);
 
-        // Opcional: Pintar la barra de progreso del color de la meta (Requiere un Drawable dinámico, por ahora lo dejamos nativo)
+        // --- PUNTO 2: Efecto visual de "Completada" ---
+        if (estaCompletada) {
+            holder.itemView.setAlpha(0.5f); // La tarjeta se vuelve semi-transparente
+        } else {
+            holder.itemView.setAlpha(1.0f); // Estado normal
+        }
 
         // 6. Menú de 3 Puntos
         holder.ivOpciones.setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(context, holder.ivOpciones);
+            android.widget.PopupMenu popup = new android.widget.PopupMenu(context, holder.ivOpciones);
 
-            // Añadimos las opciones
-            popup.getMenu().add("Aportar Dinero");
-            popup.getMenu().add("Editar Meta");
+            // Si NO está completada, dejamos que aporte dinero o la edite.
+            if (!estaCompletada) {
+                popup.getMenu().add("Aportar Dinero");
+                popup.getMenu().add("Editar Meta");
+            }
+            // Eliminar siempre debe estar disponible
             popup.getMenu().add("Eliminar Meta");
 
             popup.setOnMenuItemClickListener(item -> {

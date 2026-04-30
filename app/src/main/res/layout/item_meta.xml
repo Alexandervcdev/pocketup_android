@@ -79,6 +79,7 @@
             android:layout_marginTop="16dp"
             android:max="100"
             android:progress="45"
+            android:progressTint="@color/turquesa_oscuro"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/card_icono_meta" />

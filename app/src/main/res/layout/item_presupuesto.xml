@@ -47,18 +47,29 @@
             app:layout_constraintTop_toTopOf="@id/card_icono_presupuesto" />
 
         <TextView
+            android:id="@+id/tv_rango_fechas_item"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="01 abr - 30 abr"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toStartOf="@+id/iv_opciones_presupuesto"
+            app:layout_constraintStart_toEndOf="@id/card_icono_presupuesto"
+            app:layout_constraintTop_toBottomOf="@id/tv_nombre_presupuesto" />
+
+        <TextView
             android:id="@+id/tv_advertencia_presupuesto"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:text="¡Límite superado!"
             android:textColor="@color/red"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="@id/card_icono_presupuesto"
             app:layout_constraintStart_toEndOf="@id/card_icono_presupuesto"
-            app:layout_constraintTop_toBottomOf="@id/tv_nombre_presupuesto" />
+            app:layout_constraintTop_toBottomOf="@id/tv_rango_fechas_item" />
 
         <ImageView
             android:id="@+id/iv_opciones_presupuesto"

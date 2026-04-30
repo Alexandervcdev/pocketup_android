@@ -12,11 +12,18 @@
         android:orientation="vertical"
         android:padding="24dp">
 
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:background="#E0E0E0" />
+
         <TextView
             android:id="@+id/tv_titulo_sheet_presupuesto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Establecer Presupuesto"
+            android:text="Planificar Presupuesto"
             android:textColor="?attr/colorOnSurface"
             android:textSize="22sp"
             android:textStyle="bold"
@@ -25,7 +32,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Elige una categoría y fija un límite mensual de gasto."
+            android:text="Elige una categoría y el tiempo que durará tu límite de gasto."
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="14sp"
             android:layout_marginBottom="24dp" />
@@ -33,7 +40,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Selecciona Categoría"
+            android:text="1. Selecciona Categoría"
             android:textStyle="bold"
             android:layout_marginBottom="12dp"/>
 
@@ -49,8 +56,10 @@
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Límite Mensual"
-            android:layout_marginBottom="32dp"
+            android:hint="Cantidad límite"
+            app:boxStrokeColor="@color/selector_input"
+            app:hintTextColor="@color/turquesa_oscuro"
+            android:layout_marginBottom="16dp"
             app:prefixText="€ ">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -60,12 +69,34 @@
                 android:inputType="numberDecimal" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Duración del periodo"
+            app:boxStrokeColor="@color/selector_input"
+            app:hintTextColor="@color/turquesa_oscuro"
+            android:layout_marginBottom="32dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_presupuesto_rango"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:focusable="false"
+                android:inputType="none"
+                app:drawableEndCompat="@android:drawable/ic_menu_my_calendar"
+                app:drawableTint="@color/turquesa_oscuro" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_guardar_presupuesto"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="Guardar Presupuesto"
+            android:textColor="@android:color/white"
             android:textSize="16sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/turquesa_oscuro"
             app:cornerRadius="12dp" />
 
     </LinearLayout>

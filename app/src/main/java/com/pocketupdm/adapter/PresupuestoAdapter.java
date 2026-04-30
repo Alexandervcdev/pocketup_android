@@ -22,7 +22,9 @@ import com.pocketupdm.model.Presupuesto;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -59,10 +61,26 @@ public class PresupuestoAdapter extends RecyclerView.Adapter<PresupuestoAdapter.
     public void onBindViewHolder(@NonNull PresupuestoViewHolder holder, int position) {
         Presupuesto pres = listaPresupuestos.get(position);
 
-        // 1. Textos y Formatos
-        // Ojo: Si la categoría es null (error de BBDD), ponemos un valor por defecto
+        // 1. Nombre y FECHAS (NUEVO)
         String nombreCat = pres.getCategoria() != null ? pres.getCategoria().getNombre() : "Categoría";
         holder.tvNombre.setText(nombreCat);
+
+        // Formatear fechas: de "2026-04-29" a "29 abr."
+        try {
+            SimpleDateFormat sdfApi = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            SimpleDateFormat sdfVisual = new SimpleDateFormat("dd MMM", Locale.getDefault());
+
+            Date inicio = sdfApi.parse(pres.getFechaInicio());
+            Date fin = sdfApi.parse(pres.getFechaFin());
+
+            if (inicio != null && fin != null) {
+                String rango = sdfVisual.format(inicio) + " - " + sdfVisual.format(fin);
+                holder.tvRangoFechas.setText(rango);
+            }
+        } catch (Exception e) {
+            // Si algo falla o las fechas son nulas, mostramos el texto tal cual o nada
+            holder.tvRangoFechas.setText(pres.getFechaInicio() + " / " + pres.getFechaFin());
+        }
 
         NumberFormat formatoMoneda = NumberFormat.getCurrencyInstance(new Locale("es", "ES"));
         // Si montoGastado es null, asumimos 0
@@ -106,9 +124,11 @@ public class PresupuestoAdapter extends RecyclerView.Adapter<PresupuestoAdapter.
         } else {
             // VERDE/NORMAL: Usamos el color de la categoría
             holder.pbProgreso.setProgressTintList(ColorStateList.valueOf(colorFiltroCategoria));
-            // Restaurar colores por defecto del tema
-            holder.tvPorcentaje.setTextColor(ContextCompat.getColor(context, com.google.android.material.R.color.material_dynamic_neutral10));
+            holder.tvPorcentaje.setTextColor(ContextCompat.getColor(context, R.color.black_pu));
             holder.tvAdvertencia.setVisibility(View.GONE);
+
+            // Opcional: El rango de fechas en un gris suave para no distraer
+            holder.tvRangoFechas.setTextColor(Color.GRAY);
         }
 
         // 4. Configurar Burbuja de Icono (Igual que siempre)
@@ -148,7 +168,7 @@ public class PresupuestoAdapter extends RecyclerView.Adapter<PresupuestoAdapter.
     public static class PresupuestoViewHolder extends RecyclerView.ViewHolder {
         MaterialCardView cardIcono;
         ImageView ivIcono, ivOpciones;
-        TextView tvNombre, tvAdvertencia, tvGastadoTexto, tvPorcentaje;
+        TextView tvNombre, tvAdvertencia, tvGastadoTexto, tvPorcentaje,tvRangoFechas;
         ProgressBar pbProgreso;
 
         public PresupuestoViewHolder(@NonNull View itemView) {
@@ -161,6 +181,7 @@ public class PresupuestoAdapter extends RecyclerView.Adapter<PresupuestoAdapter.
             tvGastadoTexto = itemView.findViewById(R.id.tv_gastado_texto);
             tvPorcentaje = itemView.findViewById(R.id.tv_porcentaje_presupuesto);
             pbProgreso = itemView.findViewById(R.id.pb_progreso_presupuesto);
+            tvRangoFechas = itemView.findViewById(R.id.tv_rango_fechas_item);
         }
     }
 }

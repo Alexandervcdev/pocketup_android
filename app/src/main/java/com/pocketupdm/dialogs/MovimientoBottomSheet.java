@@ -5,6 +5,7 @@ import static com.pocketupdm.utils.DialogUtils.mostrarDialogoConfirmacion;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -36,6 +38,7 @@ import com.pocketupdm.model.MovementType;
 import com.pocketupdm.model.Presupuesto;
 import com.pocketupdm.network.RetrofitClient;
 import com.pocketupdm.utils.DialogUtils;
+import com.pocketupdm.utils.NotificacionUI;
 import com.pocketupdm.utils.SessionManager;
 
 import java.math.BigDecimal;
@@ -272,13 +275,20 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
                 // Verificación de Meta en caso de Ingreso
                 if (tipo == MovementType.INGRESO && switchAsignarMeta.isChecked()) {
                     if (metaSeleccionadaId == null) {
-                        Toast.makeText(getContext(), "Selecciona una meta en el menú desplegable", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Selecciona una meta en el menú", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    aportarDineroAMetaSilenciosamente(metaSeleccionadaId, importe);
+
+                    // CAPTURAMOS la actividad aquí, mientras el fragmento sigue vivo
+                    final FragmentActivity actividadHost = getActivity();
+
+                    // RETRASO MÁGICO DE 1 SEGUNDO (1000 ms) PARA EVITAR EL CHOQUE EN BASE DE DATOS
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        // Le pasamos la actividad capturada a la función
+                        aportarDineroAMetaSilenciosamente(metaSeleccionadaId, importe, actividadHost);
+                    }, 1000);
                 }
 
-                // Disparar el callback hacia el Fragment padre y cerrar el diálogo
                 listener.onGuardar(importe, notaStr, tipo, fechaSeleccionada, categoriaSeleccionadaId);
                 dismiss();
 
@@ -334,9 +344,13 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
             return;
         }
         List<Meta> metasValidas = new ArrayList<>();
-
         for (Meta meta : metasDisponibles) {
-            if (meta.getFechaLimite().compareTo(fechaSeleccionada) >= 0) {
+            // Comprobamos que la fecha sea válida
+            boolean fechaValida = meta.getFechaLimite().compareTo(fechaSeleccionada) >= 0;
+            // Comprobamos que el monto actual sea MENOR que el objetivo (no completada)
+            boolean noCompletada = meta.getMontoActual().compareTo(meta.getMontoObjetivo()) < 0;
+
+            if (fechaValida && noCompletada) {
                 metasValidas.add(meta);
             }
         }
@@ -359,13 +373,50 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
      * @param idMeta ID de la meta destino
      * @param cantidad Cantidad del ingreso
      */
-    private void aportarDineroAMetaSilenciosamente(Long idMeta, BigDecimal cantidad) {
+// Añadimos el parámetro "FragmentActivity activityHost"
+    private void aportarDineroAMetaSilenciosamente(Long idMeta, BigDecimal cantidad, androidx.fragment.app.FragmentActivity activityHost) {
+        if (activityHost == null) return; // Seguridad básica
+
         Map<String, BigDecimal> payload = new HashMap<>();
         payload.put("cantidad", cantidad);
 
         RetrofitClient.getApiService().agregarFondosMeta(idMeta, payload).enqueue(new Callback<Meta>() {
-            @Override public void onResponse(Call<Meta> call, Response<Meta> response) { }
-            @Override public void onFailure(Call<Meta> call, Throwable t) { }
+            @Override
+            public void onResponse(Call<Meta> call, Response<Meta> response) {
+                // AQUÍ ESTABA EL ERROR: Ya no usamos isAdded() porque el fragmento ya se cerró.
+                // Solo comprobamos que la pantalla principal siga existiendo.
+                if (activityHost.isFinishing()) return;
+
+                if (response.isSuccessful() && response.body() != null) {
+                    Meta metaActualizada = response.body();
+
+                    // Usamos el truco de los decimales por si acaso
+                    BigDecimal actual = metaActualizada.getMontoActual().setScale(2, java.math.RoundingMode.HALF_UP);
+                    BigDecimal objetivo = metaActualizada.getMontoObjetivo().setScale(2, java.math.RoundingMode.HALF_UP);
+
+                    if (actual.compareTo(objetivo) >= 0) {
+                        // 1. Creamos un pequeño retraso de 3 segundos (3000ms)
+                        // para dejar que la notificación de XP termine su animación.
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+
+                            // 2. Verificamos que la pantalla siga ahí
+                            if (activityHost != null && !activityHost.isFinishing()) {
+                                NotificacionUI.mostrar(
+                                        activityHost,
+                                        activityHost.getString(R.string.goal_completed),
+                                        activityHost.getString(R.string.goal_description) + " " + metaActualizada.getNombre(),
+                                        android.R.drawable.star_on
+                                );
+                            }
+                        }, 3000);
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Meta> call, Throwable t) {
+                android.util.Log.e("API_META", "Fallo al aportar: " + t.getMessage());
+            }
         });
     }
 

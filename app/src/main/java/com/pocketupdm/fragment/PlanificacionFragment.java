@@ -20,11 +20,13 @@ import com.google.android.material.tabs.TabLayout;
 import com.pocketupdm.R;
 import com.pocketupdm.adapter.MetaAdapter;
 import com.pocketupdm.adapter.PresupuestoAdapter;
+import com.pocketupdm.dialogs.AportarMetaBottomSheet;
 import com.pocketupdm.dialogs.NuevaMetaBottomSheet;
 import com.pocketupdm.model.Meta;
 import com.pocketupdm.model.Presupuesto;
 import com.pocketupdm.network.RetrofitClient;
 import com.pocketupdm.utils.DialogUtils;
+import com.pocketupdm.utils.NotificacionUI;
 import com.pocketupdm.utils.SessionManager;
 
 import java.math.BigDecimal;
@@ -114,13 +116,21 @@ public class PlanificacionFragment extends Fragment {
         RetrofitClient.getApiService().obtenerPresupuestos(usuarioId).enqueue(new Callback<List<Presupuesto>>() {
             @Override
             public void onResponse(Call<List<Presupuesto>> call, Response<List<Presupuesto>> response) {
-                if (!isAdded() || getContext() == null) return; // Escudo protector
+                if (!isAdded() || getContext() == null) return;
 
                 if (response.isSuccessful() && response.body() != null) {
                     List<Presupuesto> presupuestos = response.body();
                     configurarAdaptadorPresupuestos(presupuestos);
                 } else {
-                    Toast.makeText(getContext(), "Error al cargar presupuestos", Toast.LENGTH_SHORT).show();
+                    // --- AÑADE ESTO PARA DEBUG ---
+                    int codigo = response.code();
+                    android.util.Log.e("API_ERROR", "Error al cargar presupuestos. Código: " + codigo);
+                    try {
+                        String errorMsg = response.errorBody().string();
+                        android.util.Log.e("API_ERROR", "Mensaje del servidor: " + errorMsg);
+                    } catch (Exception e) {}
+
+                    Toast.makeText(getContext(), "Error " + codigo + ": No se pudo cargar", Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -187,13 +197,20 @@ public class PlanificacionFragment extends Fragment {
         RetrofitClient.getApiService().obtenerMetas(usuarioId).enqueue(new Callback<List<Meta>>() {
             @Override
             public void onResponse(Call<List<Meta>> call, Response<List<Meta>> response) {
-                if (!isAdded() || getContext() == null) return; // Escudo
-
+                if (!isAdded() || getContext() == null) return;
                 if (response.isSuccessful() && response.body() != null) {
                     List<Meta> metas = response.body();
+                    // --- LÓGICA DE ORDENACIÓN ---
+                    // Usamos sort para poner las NO completadas arriba
+                    metas.sort((m1, m2) -> {
+                        boolean m1Completada = m1.getMontoActual().compareTo(m1.getMontoObjetivo()) >= 0;
+                        boolean m2Completada = m2.getMontoActual().compareTo(m2.getMontoObjetivo()) >= 0;
+                        // Boolean.compare devuelve 0 si son iguales, negativo si el primero es false y el segundo true
+                        // Esto pondrá los "false" (no completadas) al principio.
+                        return Boolean.compare(m1Completada, m2Completada);
+                    });
+
                     configurarAdaptadorMetas(metas);
-                } else {
-                    Toast.makeText(getContext(), "Error al cargar metas", Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -214,8 +231,10 @@ public class PlanificacionFragment extends Fragment {
 
             @Override
             public void onEditar(Meta meta) {
-                // TODO: Abriremos un BottomSheet para editar (lo haremos en el siguiente paso)
-                Toast.makeText(getContext(), "Editar meta en construcción...", Toast.LENGTH_SHORT).show();
+                NuevaMetaBottomSheet bottomSheet = new NuevaMetaBottomSheet();
+                bottomSheet.setMetaAEditar(meta); // Le pasamos la meta que queremos cambiar
+                bottomSheet.setListener(() -> mostrarMetas()); // Para que refresque al terminar
+                bottomSheet.show(getParentFragmentManager(), "EditarMeta");
             }
 
             @Override
@@ -236,49 +255,10 @@ public class PlanificacionFragment extends Fragment {
 
     // --- LÓGICA PARA AÑADIR DINERO A LA HUCHA ---
     private void dialogoAportarDinero(Meta meta) {
-        EditText input = new EditText(getContext());
-        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setHint("Ej: 50.00");
-
-        new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Aportar a " + meta.getNombre())
-                .setMessage("¿Cuánto dinero deseas añadir a esta meta?")
-                .setView(input)
-                .setPositiveButton("Añadir", (dialog, which) -> {
-                    String cantidadStr = input.getText().toString().trim();
-                    if (!cantidadStr.isEmpty()) {
-                        try {
-                            BigDecimal cantidad = new BigDecimal(cantidadStr.replace(",", "."));
-                            aportarDineroEnBackend(meta.getId(), cantidad);
-                        } catch (NumberFormatException e) {
-                            Toast.makeText(getContext(), "Cantidad no válida", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
-
-    private void aportarDineroEnBackend(Long metaId, BigDecimal cantidad) {
-        Map<String, BigDecimal> payload = new HashMap<>();
-        payload.put("cantidad", cantidad);
-
-        RetrofitClient.getApiService().agregarFondosMeta(metaId, payload).enqueue(new Callback<Meta>() {
-            @Override
-            public void onResponse(Call<Meta> call, Response<Meta> response) {
-                if (!isAdded() || getContext() == null) return;
-                if (response.isSuccessful()) {
-                    Toast.makeText(getContext(), "¡Fondos añadidos con éxito!", Toast.LENGTH_SHORT).show();
-                    mostrarMetas(); // Recargamos la lista para ver la barra de progreso avanzar
-                }
-            }
-
-            @Override
-            public void onFailure(Call<Meta> call, Throwable t) {
-                if (!isAdded() || getContext() == null) return;
-                Toast.makeText(getContext(), "Error al aportar fondos", Toast.LENGTH_SHORT).show();
-            }
-        });
+        AportarMetaBottomSheet bottomSheet = new AportarMetaBottomSheet();
+        bottomSheet.setMeta(meta);
+        bottomSheet.setOnSuccess(() -> mostrarMetas());
+        bottomSheet.show(getParentFragmentManager(), "AportarMeta");
     }
 
     private void eliminarMetaEnBackend(Long id) {

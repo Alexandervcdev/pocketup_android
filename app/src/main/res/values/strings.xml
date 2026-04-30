@@ -59,4 +59,8 @@
     <string name="select_icon">Elige un Icono</string>
     <string name="create_category">Crear Categoría</string>
     <string name="planifica">Planifica</string>
+    <string name="goal_completed">¡Meta Completada! 🏆</string>
+    <string name="goal_description">Has logrado tu objetivo: </string>
+
+
 </resources>

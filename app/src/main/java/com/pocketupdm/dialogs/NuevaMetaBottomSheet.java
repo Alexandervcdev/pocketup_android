@@ -16,6 +16,8 @@ import androidx.annotation.Nullable;
 
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.datepicker.CalendarConstraints;
+import com.google.android.material.datepicker.DateValidatorPointForward;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.textfield.TextInputEditText;
 import com.pocketupdm.R;
@@ -93,7 +95,15 @@ public class NuevaMetaBottomSheet extends BottomSheetDialogFragment {
 
             // La fecha viene del backend en "YYYY-MM-DD"
             fechaSeleccionadaParaApi = metaAEditar.getFechaLimite();
-            etFecha.setText(fechaSeleccionadaParaApi); // Aquí podríamos formatearla mejor para la vista
+            // Convertimos la fecha de la API (YYYY-MM-DD) al formato visual (DD/MM/YYYY)
+            try {
+                SimpleDateFormat sdfApi = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                SimpleDateFormat sdfVisual = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+                java.util.Date date = sdfApi.parse(fechaSeleccionadaParaApi);
+                if (date != null) etFecha.setText(sdfVisual.format(date));
+            } catch (Exception e) {
+                etFecha.setText(fechaSeleccionadaParaApi); // Por si falla, dejamos la original
+            }
 
             colorSeleccionado = metaAEditar.getColor();
             iconoSeleccionado = metaAEditar.getIcono();
@@ -106,11 +116,20 @@ public class NuevaMetaBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void abrirSelectorFecha() {
+        // 1. Obtenemos el día de hoy
+        long hoy = MaterialDatePicker.todayInUtcMilliseconds();
+
+        // 2. Creamos la regla de validación: Desde hoy en adelante
+        CalendarConstraints restricciones = new CalendarConstraints.Builder()
+                .setValidator(DateValidatorPointForward.from(hoy))
+                .build();
+
+        // 3. Construimos el calendario con la restricción
         MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker()
                 .setTitleText("Selecciona la fecha límite")
-                // Asegúrate de usar el tema de calendario que creaste para los movimientos
                 .setTheme(R.style.Theme_App_Calendar_Turquesa)
-                .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
+                .setSelection(hoy)
+                .setCalendarConstraints(restricciones) // ¡Magia aplicada!
                 .build();
 
         datePicker.addOnPositiveButtonClickListener(selection -> {
@@ -124,6 +143,7 @@ public class NuevaMetaBottomSheet extends BottomSheetDialogFragment {
             SimpleDateFormat sdfVisual = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
             etFecha.setText(sdfVisual.format(utc.getTime()));
         });
+
         datePicker.show(getParentFragmentManager(), "DATE_PICKER_META");
     }
 
