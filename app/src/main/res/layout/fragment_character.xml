@@ -97,6 +97,7 @@
                 android:layout_height="wrap_content"
                 android:max="100"
                 android:progress="0"
+                android:animateLayoutChanges="true"
                 android:progressTint="@color/turquesa_oscuro"
                 android:layout_marginStart="8dp"
                 app:layout_constraintStart_toEndOf="@id/tv_xp_label"
@@ -107,19 +108,35 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>
 
+
+    <TextView
+        android:id="@+id/tv_nombre_personaje"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="56dp"
+        android:text="@string/loading"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/card_stats_header" />
+
     <ImageView
         android:id="@+id/iv_skin_personaje_grande"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_margin="32dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
         android:scaleType="fitCenter"
-        android:src="@drawable/ic_person"
-        app:tint="?attr/colorOnSurfaceVariant"
-        app:layout_constraintTop_toBottomOf="@id/card_stats_header"
         app:layout_constraintBottom_toTopOf="@id/ll_botones_accion"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintDimensionRatio="1:1"/>
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_nombre_personaje"
+        app:layout_constraintVertical_bias="0.0" />
 
     <LinearLayout
         android:id="@+id/ll_botones_accion"

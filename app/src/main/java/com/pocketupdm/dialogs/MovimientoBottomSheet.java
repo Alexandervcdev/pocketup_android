@@ -32,6 +32,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.pocketupdm.R;
 import com.pocketupdm.adapter.CategoriaAdapter;
 import com.pocketupdm.adapter.MetaSelectorAdapter;
+import com.pocketupdm.dto.MovimientoResponse;
 import com.pocketupdm.model.Categoria;
 import com.pocketupdm.model.Meta;
 import com.pocketupdm.model.MovementType;
@@ -85,12 +86,15 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
     private List<Presupuesto> presupuestosUsuario = new ArrayList<>();
 
     private SessionManager sessionManager;
+    private MovimientoResponse movimientoAEditar; // El movimiento original si estamos en modo edición
+    private boolean isModoEdicion = false;
+    private TextInputEditText etNombre; // El nuevo campo de Título/Nombre
 
     /**
      * Interfaz de comunicación para devolver los datos validados a la pantalla Home (u otra).
      */
     public interface OnMovimientoGuardadoListener {
-        void onGuardar(BigDecimal importe, String nota, MovementType tipo, String fecha, Long categoriaId);
+        void onGuardar(String nombre, BigDecimal importe, String nota, MovementType tipo, String fecha, Long categoriaId);
     }
 
     /**
@@ -101,6 +105,12 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
     public MovimientoBottomSheet(MovementType tipo, OnMovimientoGuardadoListener listener) {
         this.tipo = tipo;
         this.listener = listener;
+    }
+
+    public void setMovimientoAEditar(MovimientoResponse movimiento) {
+        this.movimientoAEditar = movimiento;
+        this.isModoEdicion = true;
+        this.tipo = movimiento.getTipo(); // Respetamos si era ingreso o gasto
     }
 
     @Nullable
@@ -167,6 +177,7 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
 
         // --- CONFIGURACIÓN DEL FORMULARIO Y FECHA ---
         TextView tvTitulo = view.findViewById(R.id.tv_titulo_sheet);
+        etNombre = view.findViewById(R.id.et_nombre);
         TextInputEditText etImporte = view.findViewById(R.id.et_importe);
         TextInputEditText etFecha = view.findViewById(R.id.et_fecha);
         TextInputEditText etNota = view.findViewById(R.id.et_nota);
@@ -177,6 +188,40 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
         SimpleDateFormat sdfApi = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         fechaSeleccionada = sdfApi.format(calendar.getTime());
         etFecha.setText(sdfVisual.format(calendar.getTime()));
+
+        // --- LÓGICA DE RELLENADO (SI ESTAMOS EDITANDO) ---
+        if (isModoEdicion && movimientoAEditar != null) {
+            tvTitulo.setText("Editar Movimiento");
+            btnGuardar.setText("Actualizar");
+
+            // Rellenamos el nuevo campo
+            etNombre.setText(movimientoAEditar.getNombre());
+
+            // Rellenamos el importe quitándole los ceros innecesarios (ej: 50.00 -> 50)
+            etImporte.setText(movimientoAEditar.getImporte().stripTrailingZeros().toPlainString());
+
+            // Rellenamos la nota si no es "Sin nota"
+            if (!"Sin nota".equals(movimientoAEditar.getNota())) {
+                etNota.setText(movimientoAEditar.getNota());
+            }
+
+            // Rellenamos la fecha
+            try {
+                fechaSeleccionada = movimientoAEditar.getFecha(); // Guardamos para la API
+                Calendar cal = Calendar.getInstance();
+                SimpleDateFormat sdfApiParse = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                cal.setTime(sdfApiParse.parse(fechaSeleccionada));
+                SimpleDateFormat sdfVisualParse = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+                etFecha.setText(sdfVisualParse.format(cal.getTime()));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            // Seleccionamos su categoría y apagamos la opción de meta (no se puede asignar dinero a metas al editar)
+            categoriaSeleccionadaId = movimientoAEditar.getCategoria().getId();
+            llAsignarMeta.setVisibility(View.GONE);
+            switchAsignarMeta.setChecked(false);
+        }
 
         etFecha.setOnClickListener(v -> {
             MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker()
@@ -259,9 +304,11 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
 
         // --- ACCIÓN DE GUARDAR ---
         btnGuardar.setOnClickListener(v -> {
+            String nombreStr = etNombre.getText().toString().trim();
             String importeStr = etImporte.getText().toString().trim();
             String notaStr = etNota.getText().toString().trim();
 
+            if (nombreStr.isEmpty()) { etNombre.setError("Obligatorio"); return; }
             if (importeStr.isEmpty()) { etImporte.setError("Obligatorio"); return; }
 
             try {
@@ -289,7 +336,7 @@ public class MovimientoBottomSheet extends BottomSheetDialogFragment {
                     }, 1000);
                 }
 
-                listener.onGuardar(importe, notaStr, tipo, fechaSeleccionada, categoriaSeleccionadaId);
+                listener.onGuardar(nombreStr, importe, notaStr, tipo, fechaSeleccionada, categoriaSeleccionadaId);
                 dismiss();
 
             } catch (NumberFormatException e) {

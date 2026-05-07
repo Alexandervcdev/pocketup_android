@@ -29,6 +29,27 @@
         app:layout_constraintTop_toBottomOf="@id/view_drag_handle" />
 
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_nombre"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:hint="Título (Ej: Galletas)"
+        app:boxStrokeColor="@color/selector_input_color"
+        app:hintTextColor="@color/selector_hint_color"
+        app:layout_constraintTop_toBottomOf="@id/tv_titulo_sheet">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_nombre"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapSentences"
+            android:textSize="18sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+
+
+    <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/til_importe"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
@@ -37,7 +58,7 @@
         android:hint="@string/example_import"
         app:boxStrokeColor="@color/selector_input_color"
         app:hintTextColor="@color/selector_hint_color"
-        app:layout_constraintTop_toBottomOf="@id/tv_titulo_sheet">
+        app:layout_constraintTop_toBottomOf="@id/til_nombre">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_importe"

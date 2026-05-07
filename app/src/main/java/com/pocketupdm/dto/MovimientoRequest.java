@@ -3,6 +3,7 @@ import com.pocketupdm.model.MovementType;
 import java.math.BigDecimal;
 
 public class MovimientoRequest {
+    private String nombre;
     private BigDecimal importe;
     private String fecha; // Enviamos como String "YYYY-MM-DD"
     private MovementType tipo;
@@ -10,7 +11,8 @@ public class MovimientoRequest {
     private Long usuarioId;
     private Long categoriaId; //Para que Spring sepa a qué categoría pertenece
 
-    public MovimientoRequest(BigDecimal importe, String fecha, MovementType tipo, String nota, Long usuarioId, Long categoriaId) {
+    public MovimientoRequest(String nombre, BigDecimal importe, String fecha, MovementType tipo, String nota, Long usuarioId, Long categoriaId) {
+        this.nombre = nombre;
         this.importe = importe;
         this.fecha = fecha;
         this.tipo = tipo;
@@ -18,6 +20,9 @@ public class MovimientoRequest {
         this.usuarioId = usuarioId;
         this.categoriaId = categoriaId;
     }
+
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
 
     public BigDecimal getImporte() {
         return importe;

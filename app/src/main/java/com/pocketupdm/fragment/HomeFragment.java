@@ -70,7 +70,7 @@ public class HomeFragment extends Fragment {
 
         // 1. Vincular Vistas de la Tarjeta de Balance
         tvFecha = view.findViewById(R.id.tv_home_fecha);
-        tvSaldo = view.findViewById(R.id.tv_home_saldo); // Este mostrará el Disponible
+        tvSaldo = view.findViewById(R.id.tv_home_saldo);
         ivStatusSaldo = view.findViewById(R.id.iv_status_saldo);
 
         // 2. Mensaje de bienvenida
@@ -84,10 +84,29 @@ public class HomeFragment extends Fragment {
         String mesActual = sdfMes.format(calendar.getTime());
         tvSubtitle.setText("Este es tu progreso de " + mesActual.substring(0, 1).toUpperCase() + mesActual.substring(1));
 
-        // 4. Configurar Lista de Movimientos Recientes
+        // 4. Configurar Lista de Movimientos Recientes con las nuevas opciones (Editar/Eliminar)
         rvTopMovimientos = view.findViewById(R.id.rv_top_movimientos);
         rvTopMovimientos.setLayoutManager(new LinearLayoutManager(getContext()));
-        adapter = new MovimientoAdapter(getContext(), new ArrayList<>(), null);
+
+        adapter = new MovimientoAdapter(getContext(), new ArrayList<>(), new MovimientoAdapter.OnMovimientoOpcionesListener() {
+            @Override
+            public void onEditar(MovimientoResponse movimiento) {
+                abrirBottomSheetEditar(movimiento);
+            }
+
+            @Override
+            public void onEliminar(MovimientoResponse movimiento) {
+                com.pocketupdm.utils.DialogUtils.mostrarDialogoConfirmacion(
+                        requireContext(),
+                        "Eliminar Movimiento",
+                        "¿Seguro que deseas eliminar este movimiento? Afectará a tu saldo total.",
+                        "Eliminar",
+                        R.color.black_pu,
+                        R.color.red,
+                        () -> eliminarMovimiento(movimiento.getId())
+                );
+            }
+        });
         rvTopMovimientos.setAdapter(adapter);
 
         // 4.5. Configurar clic en "Últimos movimientos"
@@ -109,7 +128,6 @@ public class HomeFragment extends Fragment {
         SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM, yyyy", new Locale("es", "ES"));
         tvFecha.setText(sdf.format(new Date()));
 
-        // PRIMERA LLAMADA: Pedimos los movimientos
         RetrofitClient.getApiService().obtenerMovimientos(usuarioId).enqueue(new Callback<List<MovimientoResponse>>() {
             @Override
             public void onResponse(Call<List<MovimientoResponse>> call, Response<List<MovimientoResponse>> response) {
@@ -118,7 +136,6 @@ public class HomeFragment extends Fragment {
                 if (response.isSuccessful() && response.body() != null) {
                     List<MovimientoResponse> todosLosMovimientos = response.body();
 
-                    // 1. Calculamos el Patrimonio Total (Ingresos - Gastos)
                     BigDecimal saldoTotalCalculado = BigDecimal.ZERO;
                     for (MovimientoResponse m : todosLosMovimientos) {
                         if (m.getTipo() == MovementType.INGRESO) {
@@ -128,12 +145,10 @@ public class HomeFragment extends Fragment {
                         }
                     }
 
-                    // 2. Extraemos los top 3 para la lista
                     Collections.sort(todosLosMovimientos, (m1, m2) -> m2.getId().compareTo(m1.getId()));
                     int limite = Math.min(todosLosMovimientos.size(), 3);
                     adapter.setMovimientos(new ArrayList<>(todosLosMovimientos.subList(0, limite)));
 
-                    // 3. SEGUNDA LLAMADA: Pedimos las Metas para calcular el Disponible
                     calcularDisponibleConMetas(usuarioId, saldoTotalCalculado);
                 }
             }
@@ -145,7 +160,6 @@ public class HomeFragment extends Fragment {
         });
     }
 
-    // Trae las metas y hace la matemática final
     private void calcularDisponibleConMetas(Long usuarioId, BigDecimal patrimonioTotal) {
         RetrofitClient.getApiService().obtenerMetas(usuarioId).enqueue(new Callback<List<Meta>>() {
             @Override
@@ -153,23 +167,18 @@ public class HomeFragment extends Fragment {
                 if (!isAdded() || getContext() == null) return;
 
                 BigDecimal dineroAhorrado = BigDecimal.ZERO;
-                // Si hay metas, sumamos el dinero que el usuario tiene guardado en ellas
                 if (response.isSuccessful() && response.body() != null) {
                     for (Meta meta : response.body()) {
                         dineroAhorrado = dineroAhorrado.add(meta.getMontoActual());
                     }
                 }
 
-                // LA FÓRMULA MÁGICA: Disponible = Total - Ahorrado
                 BigDecimal saldoDisponible = patrimonioTotal.subtract(dineroAhorrado);
-
-                // Mostramos SOLO el saldo disponible en pantalla
                 pintarSaldosEnPantalla(saldoDisponible);
             }
 
             @Override
             public void onFailure(Call<List<Meta>> call, Throwable t) {
-                // Si falla la carga de metas, asumimos que no hay ahorros y mostramos el total
                 pintarSaldosEnPantalla(patrimonioTotal);
             }
         });
@@ -177,11 +186,8 @@ public class HomeFragment extends Fragment {
 
     private void pintarSaldosEnPantalla(BigDecimal disponible) {
         NumberFormat formatoMoneda = NumberFormat.getCurrencyInstance(new Locale("es", "ES"));
-
-        // Pintamos el texto principal
         tvSaldo.setText(formatoMoneda.format(disponible));
 
-        // Lógica visual del ícono basada en el DINERO DISPONIBLE
         TypedValue typedValue = new TypedValue();
         requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
         int colorDinamicoTexto = typedValue.data;
@@ -226,21 +232,23 @@ public class HomeFragment extends Fragment {
         bottomSheetDialog.show();
     }
 
+    // --- LÓGICA PARA CREAR NUEVO ---
     private void abrirBottomSheetMovimiento(MovementType tipo) {
-        MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(tipo, (importe, nota, tipoMovimiento, fecha, categoriaId) ->
-                enviarMovimientoAlBackend(importe, nota, tipoMovimiento, fecha, categoriaId)
+        MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(tipo, (nombre, importe, nota, tipoMovimiento, fecha, categoriaId) ->
+                enviarMovimientoAlBackend(nombre, importe, nota, tipoMovimiento, fecha, categoriaId)
         );
         bottomSheet.show(getParentFragmentManager(), "MovimientoBottomSheet");
     }
 
-    private void enviarMovimientoAlBackend(BigDecimal importe, String nota, MovementType tipo, String fecha,Long categoriaId) {
+    private void enviarMovimientoAlBackend(String nombre, BigDecimal importe, String nota, MovementType tipo, String fecha, Long categoriaId) {
         Long usuarioId = sessionManager.getUsuarioId();
         if (usuarioId == -1L) {
             NotificacionUI.mostrarError(getActivity(), "Error: Sesión no válida");
             NavigationUtil.irALogin(getActivity());
             return;
         }
-        MovimientoRequest request = new MovimientoRequest(importe, fecha, tipo, nota, usuarioId,categoriaId);
+
+        MovimientoRequest request = new MovimientoRequest(nombre, importe, fecha, tipo, nota, usuarioId, categoriaId);
 
         RetrofitClient.getApiService().registrarMovimiento(request).enqueue(new Callback<MovimientoResponse>() {
             @Override
@@ -248,24 +256,11 @@ public class HomeFragment extends Fragment {
                 if (!isAdded() || getContext() == null) return;
 
                 if (response.isSuccessful() && response.body() != null) {
-                    int xpGanada;
-                    String nombreMovimiento;
-                    int iconoNotificacion;
-                    int colorNotificacion;
+                    int xpGanada = (tipo == MovementType.INGRESO) ? 20 : 10;
+                    String nombreMovimiento = (tipo == MovementType.INGRESO) ? "Ingreso" : "Gasto";
+                    int iconoNotificacion = (tipo == MovementType.INGRESO) ? R.drawable.ic_ingreso : R.drawable.ic_spent;
+                    int colorNotificacion = (tipo == MovementType.INGRESO) ? R.color.turquesa_dinamico : R.color.red;
 
-                    if (tipo == MovementType.INGRESO) {
-                        xpGanada = 20;
-                        nombreMovimiento = "Ingreso";
-                        iconoNotificacion = R.drawable.ic_ingreso;
-                        colorNotificacion = R.color.turquesa_dinamico;
-                    } else {
-                        xpGanada = 10;
-                        nombreMovimiento = "Gasto";
-                        iconoNotificacion = R.drawable.ic_spent;
-                        colorNotificacion = R.color.red;
-                    }
-
-                    // 2. Mostramos la notificación con las variables que acabamos de definir
                     NotificacionUI.mostrar(
                             getActivity(),
                             "¡" + nombreMovimiento + " guardado!",
@@ -275,7 +270,7 @@ public class HomeFragment extends Fragment {
                     );
                     cargarDatosHome();
                 } else {
-                    NotificacionUI.mostrarError(getActivity(), "Error al guardar "+tipo+" revisa tu conexión e inténtalo de nuevo.");
+                    NotificacionUI.mostrarError(getActivity(), "Error al guardar el movimiento.");
                 }
             }
 
@@ -283,6 +278,63 @@ public class HomeFragment extends Fragment {
             public void onFailure(Call<MovimientoResponse> call, Throwable t) {
                 if (!isAdded() || getContext() == null) return;
                 NotificacionUI.mostrarError(getActivity(), "Fallo de conexión con el servidor.");
+            }
+        });
+    }
+
+    // --- LÓGICA PARA EDITAR ---
+    private void abrirBottomSheetEditar(MovimientoResponse mov) {
+        MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(mov.getTipo(), (nombre, importe, nota, tipoMovimiento, fecha, categoriaId) ->
+                actualizarMovimientoEnBackend(mov.getId(), nombre, importe, nota, tipoMovimiento, fecha, categoriaId)
+        );
+        bottomSheet.setMovimientoAEditar(mov);
+        bottomSheet.show(getParentFragmentManager(), "EditarMovimientoBottomSheet");
+    }
+
+    private void actualizarMovimientoEnBackend(Long id, String nombre, BigDecimal importe, String nota, MovementType tipo, String fecha, Long categoriaId) {
+        Long usuarioId = sessionManager.getUsuarioId();
+        MovimientoRequest request = new MovimientoRequest(nombre, importe, fecha, tipo, nota, usuarioId, categoriaId);
+
+        RetrofitClient.getApiService().editarMovimiento(id, request).enqueue(new Callback<MovimientoResponse>() {
+            @Override
+            public void onResponse(Call<MovimientoResponse> call, Response<MovimientoResponse> response) {
+                if (!isAdded() || getContext() == null) return;
+                if (response.isSuccessful()) {
+                    NotificacionUI.mostrar(getActivity(), "¡Actualizado!", "El movimiento ha sido modificado.", R.drawable.ic_coin, R.color.turquesa_oscuro);
+                    cargarDatosHome();
+                } else {
+                    NotificacionUI.mostrarError(getActivity(), "Error al actualizar el movimiento.");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<MovimientoResponse> call, Throwable t) {
+                if (!isAdded() || getContext() == null) return;
+                NotificacionUI.mostrarError(getActivity(), "Fallo de conexión con el servidor.");
+            }
+        });
+    }
+
+    // --- LÓGICA PARA ELIMINAR ---
+    private void eliminarMovimiento(Long idMovimiento) {
+        List<Long> idsList = new ArrayList<>();
+        idsList.add(idMovimiento);
+
+        RetrofitClient.getApiService().eliminarMovimientos(idsList).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (!isAdded() || getContext() == null) return;
+                if (response.isSuccessful()) {
+                    cargarDatosHome();
+                } else {
+                    NotificacionUI.mostrarError(getActivity(), "Error al eliminar.");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                if (!isAdded() || getContext() == null) return;
+                NotificacionUI.mostrarError(getActivity(), "Fallo de conexión.");
             }
         });
     }

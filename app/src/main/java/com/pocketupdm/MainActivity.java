@@ -1,6 +1,7 @@
 package com.pocketupdm;
 
 import android.Manifest;
+import android.app.AlertDialog; // <--- NUEVO IMPORT
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -8,6 +9,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log; // <--- NUEVO IMPORT
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -25,11 +27,16 @@ import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.auth.FirebaseAuth; // <--- NUEVO IMPORT
 import com.pocketupdm.dialogs.MovimientoBottomSheet;
+import com.pocketupdm.dto.EstadoSistemaResponse;
 import com.pocketupdm.dto.MovimientoRequest;
 import com.pocketupdm.dto.MovimientoResponse;
+import com.pocketupdm.dto.UsuarioResponse;
 import com.pocketupdm.model.MovementType;
+import com.pocketupdm.model.Usuario; // <--- NUEVO IMPORT
 import com.pocketupdm.network.RetrofitClient;
+import com.pocketupdm.utils.DialogUtils;
 import com.pocketupdm.utils.SessionManager;
 
 import java.math.BigDecimal;
@@ -41,9 +48,11 @@ import retrofit2.Response;
 public class MainActivity extends AppCompatActivity {
 
     private SessionManager sessionManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        verificarMantenimiento();
 
         sessionManager = new SessionManager(this);
 
@@ -57,6 +66,11 @@ public class MainActivity extends AppCompatActivity {
             finish();
             return; // Detenemos el MainActivity
         }
+
+        // --- 🚨 NUEVO: VERIFICACIÓN SILENCIOSA DE CUENTA SUSPENDIDA ---
+        verificarEstadoCuenta();
+        // --------------------------------------------------------------
+
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
@@ -72,10 +86,10 @@ public class MainActivity extends AppCompatActivity {
                 .findFragmentById(R.id.fragment_container);
         NavController navController = navHostFragment.getNavController();
 
-// 1. Configuramos el menú de forma estándar para que los iconos se pinten bien
+        // 1. Configuramos el menú de forma estándar para que los iconos se pinten bien
         NavigationUI.setupWithNavController(navView, navController);
 
-// 2. EVENTO A: Cuando vienes de OTRA pestaña (Ej: De Ajustes a Inicio)
+        // 2. EVENTO A: Cuando vienes de OTRA pestaña (Ej: De Ajustes a Inicio)
         navView.setOnItemSelectedListener(item -> {
             // Dejamos que Android haga la navegación normal hacia la pestaña
             boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
@@ -86,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
             return handled;
         });
 
-// 3. EVENTO B: Cuando YA ESTÁS en la pestaña y la vuelves a tocar (Ej: Estás en Historial y tocas Inicio)
+        // 3. EVENTO B: Cuando YA ESTÁS en la pestaña y la vuelves a tocar (Ej: Estás en Historial y tocas Inicio)
         navView.setOnItemReselectedListener(item -> {
             // Limpiamos el fragmento que esté encima para volver a la raíz
             navController.popBackStack(item.getItemId(), false);
@@ -110,15 +124,63 @@ public class MainActivity extends AppCompatActivity {
         manejarAccionesRapidas(getIntent());
     }
 
-    // --- MÉTODOS NUEVOS FUERA DEL ONCREATE ---
+    // --- MÉTODOS DE SEGURIDAD (SUSPENSIÓN DE CUENTAS) ---
 
-    // Este método escucha la respuesta del usuario cuando le sale la ventanita de permisos
+    private void verificarEstadoCuenta() {
+        Long idUsuario = sessionManager.getUsuarioId();
+        if (idUsuario == -1L) return;
+
+        // USAMOS TU ENDPOINT EXISTENTE
+        RetrofitClient.getApiService().obtenerPerfil(idUsuario).enqueue(new Callback<UsuarioResponse>() {
+            @Override
+            public void onResponse(Call<UsuarioResponse> call, Response<UsuarioResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    UsuarioResponse perfil = response.body();
+
+                    if ("SUSPENDIDO".equals(perfil.getEstado())) {
+                        expulsarUsuarioSuspendido();
+                    }
+                }
+            }
+            @Override
+            public void onFailure(Call<UsuarioResponse> call, Throwable t) {
+                Log.e("MAIN_ACTIVITY", "No se pudo verificar el estado de la cuenta. Permitiendo uso offline.", t);
+            }
+        });
+    }
+
+    private void expulsarUsuarioSuspendido() {
+        sessionManager.cerrarSesion();
+
+        FirebaseAuth.getInstance().signOut();
+
+        // 3. Borrar la notificación persistente de la barra superior
+        NotificationManagerCompat.from(this).cancel(999);
+
+        // 4. Mostrar el diálogo ineludible
+        DialogUtils.mostrarDialogoBloqueo(
+                this,
+                "Cuenta Suspendida",
+                "Tu acceso ha sido bloqueado por un administrador debido a una infracción de las normas o inactividad.\n\nPor favor, ponte en contacto con pocketup.soporte@gmail.com para solicitar la restauración de tu cuenta.",
+                "Volver al Inicio",
+                R.color.red, // Usa tu color rojo o el color primario de tu app
+                () -> {
+                    // Acción al presionar el botón: Redirigir al Login
+                    Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                }
+        );
+    }
+
+    // --- MÉTODOS DEL CICLO DE VIDA Y NOTIFICACIONES ---
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 101) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // ¡El usuario dijo que sí! Lanzamos la notificación
                 mostrarNotificacionPersistente();
             } else {
                 Toast.makeText(this, "Permiso denegado. No se mostrará el atajo rápido.", Toast.LENGTH_SHORT).show();
@@ -126,7 +188,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Este método salta si la app ya estaba abierta de fondo y tocas la notificación
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -136,39 +197,29 @@ public class MainActivity extends AppCompatActivity {
     private void manejarAccionesRapidas(Intent intent) {
         if (intent != null && intent.hasExtra("ACCION_RAPIDA")) {
             String accion = intent.getStringExtra("ACCION_RAPIDA");
-
             MovementType tipo = accion.equals("INGRESO") ? MovementType.INGRESO : MovementType.GASTO;
 
-            // 1. Abrimos el formulario de registro rápido
-            // IMPORTANTE: Ahora incluimos 'categoriaId' en el lambda (5 parámetros)
-            MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(tipo, (importe, nota, tipoMovimiento, fecha, categoriaId) -> {
-
-                // 2. Ya no ponemos solo un Toast, ¡enviamos los datos de verdad!
-                enviarMovimientoAlBackend(importe, nota, tipoMovimiento, fecha, categoriaId);
-
+            MovimientoBottomSheet bottomSheet = new MovimientoBottomSheet(tipo, (nombre, importe, nota, tipoMovimiento, fecha, categoriaId) -> {
+                enviarMovimientoAlBackend(nombre, importe, nota, tipoMovimiento, fecha, categoriaId);
             });
 
             bottomSheet.show(getSupportFragmentManager(), "MovimientoBottomSheetRapido");
         }
     }
 
-    private void enviarMovimientoAlBackend(BigDecimal importe, String nota, MovementType tipo, String fecha, Long categoriaId) {
-        // 3. AHORA SÍ RECONOCE EL sessionManager
+    private void enviarMovimientoAlBackend(String nombre, BigDecimal importe, String nota, MovementType tipo, String fecha, Long categoriaId) {
         Long usuarioId = sessionManager.getUsuarioId();
         if (usuarioId == -1L) return;
 
-        // Creamos el request con el nuevo categoriaId
-        MovimientoRequest request = new MovimientoRequest(importe, fecha, tipo, nota, usuarioId, categoriaId);
+        MovimientoRequest request = new MovimientoRequest(nombre, importe, fecha, tipo, nota, usuarioId, categoriaId);
 
         RetrofitClient.getApiService().registrarMovimiento(request).enqueue(new Callback<MovimientoResponse>() {
             @Override
             public void onResponse(Call<MovimientoResponse> call, Response<MovimientoResponse> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(MainActivity.this, "¡Movimiento guardado desde el acceso rápido!", Toast.LENGTH_SHORT).show();
-                    // Opcional: Si tienes el Home abierto debajo, podrías recargar los datos
                 }
             }
-
             @Override
             public void onFailure(Call<MovimientoResponse> call, Throwable t) {
                 Toast.makeText(MainActivity.this, "Error de conexión", Toast.LENGTH_SHORT).show();
@@ -179,18 +230,16 @@ public class MainActivity extends AppCompatActivity {
     private void mostrarNotificacionPersistente() {
         String CHANNEL_ID = "pocketup_atajos";
 
-        // 1. Crear el Canal de Notificaciones (Obligatorio en Android 8+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
                     "Atajos Rápidos",
-                    NotificationManager.IMPORTANCE_LOW // LOW para que no suene ni vibre, solo aparezca
+                    NotificationManager.IMPORTANCE_LOW
             );
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) manager.createNotificationChannel(channel);
         }
 
-        // 2. Crear los "Intent" (Lo que pasará al tocar los botones)
         Intent intentIngreso = new Intent(this, MainActivity.class);
         intentIngreso.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intentIngreso.putExtra("ACCION_RAPIDA", "INGRESO");
@@ -205,22 +254,51 @@ public class MainActivity extends AppCompatActivity {
                 this, 101, intentGasto, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        // 3. Construir la notificación
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_menu_agenda) // Logo temporal
+                .setSmallIcon(android.R.drawable.ic_menu_agenda)
                 .setContentTitle("PocketUp")
                 .setContentText("Añade un movimiento rápido")
-                .setOngoing(true) // ¡La hace FIJA como Spotify!
+                .setOngoing(true)
                 .setColor(ContextCompat.getColor(this, R.color.turquesa_oscuro))
                 .addAction(android.R.drawable.ic_input_add, "Ingreso", piIngreso)
                 .addAction(android.R.drawable.ic_delete, "Gasto", piGasto);
 
-        // 4. Mostrarla
         try {
             NotificationManagerCompat.from(this).notify(999, builder.build());
         } catch (SecurityException e) {
-            // Si no hay permisos, no crashea
             e.printStackTrace();
         }
+    }
+
+    private void verificarMantenimiento() {
+        RetrofitClient.getApiService().verificarEstadoSistema().enqueue(new retrofit2.Callback<EstadoSistemaResponse>() {
+            @Override
+            public void onResponse(Call<EstadoSistemaResponse> call, retrofit2.Response<EstadoSistemaResponse> response) {
+                // 🚨 NUEVO: Comprobamos que la actividad siga viva antes de mostrar un diálogo
+                if (isFinishing() || isDestroyed()) return;
+
+                if (response.isSuccessful() && response.body() != null) {
+                    EstadoSistemaResponse estado = response.body();
+
+                    if (estado.isMantenimientoActivo()) {
+                        com.pocketupdm.utils.DialogUtils.mostrarDialogoBloqueo(
+                                MainActivity.this,
+                                estado.getTituloMantenimiento(),
+                                estado.getMensajeMantenimiento(),
+                                "Cerrar Aplicación",
+                                R.color.red,
+                                () -> {
+                                    finishAffinity();
+                                }
+                        );
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<EstadoSistemaResponse> call, Throwable t) {
+                // Falla silenciosamente, permitiendo el uso offline
+            }
+        });
     }
 }

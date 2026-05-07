@@ -6,6 +6,7 @@ public class UsuarioResponse {
     private String idioma;
 
     private String moneda;
+    private String estado;
 
     public UsuarioResponse() {
     }
@@ -40,5 +41,12 @@ public class UsuarioResponse {
 
     public void setMoneda(String moneda) {
         this.moneda = moneda;
+    }
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }

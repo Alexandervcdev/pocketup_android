@@ -41,25 +41,78 @@
                 android:text="Metas de Ahorro" />
         </com.google.android.material.tabs.TabLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_planificacion"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingHorizontal="16dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="100dp" /> </LinearLayout>
+            android:layout_height="match_parent">
 
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_planificacion"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="100dp" />
+
+            <!-- EL ESTADO VACÍO (Oculto por defecto) -->
+            <LinearLayout
+                android:id="@+id/layout_empty_planificacion"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="32dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/iv_empty_planificacion"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:src="@drawable/ic_coin"
+                    app:tint="?attr/colorOnSurfaceVariant"
+                    android:alpha="0.4"/>
+
+                <TextView
+                    android:id="@+id/tv_empty_titulo_planificacion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Sin presupuestos"
+                    android:textAlignment="center"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:id="@+id/tv_empty_sub_planificacion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Empieza a tomar el control de tu dinero. ¡Crea un límite y no te pases este mes!"
+                    android:textAlignment="center"
+                    android:textSize="15sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:alpha="0.8" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/fab_agregar_plan"
+        style="@style/Widget.MaterialComponents.Button.Icon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
-        android:text="Nueva Meta"
+        android:text="Nuevo Presupuesto"
+        android:textColor="?attr/colorOnSurface"
+        android:padding="16dp"
+        app:backgroundTint="@color/turquesa_dinamico"
+        app:cornerRadius="24dp"
         app:icon="@drawable/ic_coin"
-        android:backgroundTint="@color/turquesa_oscuro"
-        android:textColor="@color/white"
-        app:iconTint="@color/white" />
+        app:iconSize="26dp"
+        app:iconGravity="textStart"
+        app:iconPadding="6dp"
+        app:iconTint="?attr/colorOnSurface" />
 
 </FrameLayout>

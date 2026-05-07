@@ -1,4 +1,5 @@
 package com.pocketupdm.controller;
+import com.pocketupdm.dto.EstadoSistemaResponse;
 import com.pocketupdm.dto.MovimientoRequest;
 import com.pocketupdm.dto.MovimientoResponse;
 import com.pocketupdm.dto.PersonajeResponse;
@@ -42,12 +43,28 @@ public interface ApiService {
     @DELETE("user/delete/{id}")
     Call<Map<String, Object>> eliminarCuenta(@Path("id") Long id);
 
+
+    // ==========================================
+    // movimientos
+    // ==========================================
+    @PUT("movimientos/editar/{id}")
+    Call<MovimientoResponse> editarMovimiento(@Path("id") Long id, @Body MovimientoRequest request);
+
+    // PARA ELIMINAR (Como tu backend recibe una lista en el Body)
+    @HTTP(method = "DELETE", path = "movimientos/movements/delete", hasBody = true)
+    Call<Void> eliminarMovimientos(@Body List<Long> ids);
+
     @PUT("{id}/perfil")
     Call<Map<String, Object>> actualizarPerfil(@Path("id") Long id, @Body UsuarioUpdateRequest request);
     // NUEVO MÉTODO PARA BORRADO MÚLTIPLE (BATCH DELETE)
     // Usamos @HTTP en lugar de @DELETE para poder enviar un @Body con la lista de IDs
     @HTTP(method = "DELETE", path = "movimientos/movements/delete", hasBody = true)
     Call<Map<String, Object>> deleteMovements(@Body List<Long> ids);
+
+
+    // ==========================================
+    // CATEGORÍAS
+    // ==========================================
 
     // 1. Obtener todas las categorías (Las del sistema + las del usuario)
     @GET("categorias/get/{usuarioId}")
@@ -102,4 +119,8 @@ public interface ApiService {
 
     @PUT("personaje/{usuarioId}/skin")
     Call<PersonajeResponse> cambiarSkin(@Path("usuarioId") Long usuarioId, @Query("nuevaSkin") Integer nuevaSkin);
+
+    // --- ESTADO DEL SISTEMA (PÚBLICO) ---
+    @GET("api/public/estado-sistema")
+    Call<EstadoSistemaResponse> verificarEstadoSistema();
 }

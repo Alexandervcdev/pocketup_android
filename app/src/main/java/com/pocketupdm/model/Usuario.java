@@ -11,6 +11,7 @@ public class Usuario {
     private String moneda;
     private Integer nivel;
     private Integer xp;
+    private String estado;
 
     public Usuario() {
     }
@@ -94,4 +95,7 @@ public class Usuario {
     public void setXp(Integer xp) {
         this.xp = xp;
     }
+
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 }

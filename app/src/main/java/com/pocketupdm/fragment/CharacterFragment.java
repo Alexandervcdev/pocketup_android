@@ -1,5 +1,6 @@
 package com.pocketupdm.fragment;
 
+import android.animation.ObjectAnimator;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -29,7 +30,7 @@ import retrofit2.Response;
 
 public class CharacterFragment extends Fragment {
 
-    private TextView tvNivel, tvRango, tvNivelLabel;
+    private TextView tvNivel, tvRango, tvNivelLabel,tvNombrePersonaje;
     private ProgressBar pbExperiencia;
     private MaterialButton btnCambiarSkin;
     private ImageView ivSkinPersonajeGrande, ivMiniAvatar;
@@ -58,6 +59,7 @@ public class CharacterFragment extends Fragment {
         btnCambiarSkin = view.findViewById(R.id.btn_cambiar_skin);
         ivSkinPersonajeGrande = view.findViewById(R.id.iv_skin_personaje_grande);
         ivMiniAvatar = view.findViewById(R.id.iv_mini_avatar);
+        tvNombrePersonaje = view.findViewById(R.id.tv_nombre_personaje);
 
         // 2. Click en el botón del armario
         btnCambiarSkin.setOnClickListener(v -> mostrarArmario());
@@ -78,6 +80,7 @@ public class CharacterFragment extends Fragment {
 
                 if (response.isSuccessful() && response.body() != null) {
                     actualizarUI(response.body());
+
                 } else {
                     // Hacemos que Android nos diga el código exacto (404, 400, 500...)
                     Toast.makeText(getContext(), "Error Código: " + response.code(), Toast.LENGTH_LONG).show();
@@ -100,6 +103,13 @@ public class CharacterFragment extends Fragment {
     private void actualizarUI(PersonajeResponse personaje) {
         this.nivelActual = personaje.getNivel(); // Guardamos su nivel
 
+        if (personaje.getNombre() != null && !personaje.getNombre().isEmpty()) {
+            tvNombrePersonaje.setText(personaje.getNombre());
+        } else {
+            tvNombrePersonaje.setText("Aventurero");
+        }
+
+
         // Pintamos los textos
         tvNivelLabel.setText("Nivel");
         tvNivel.setText(String.valueOf(personaje.getNivel()));
@@ -111,18 +121,24 @@ public class CharacterFragment extends Fragment {
         int progresoEnBarra = personaje.getXp() % 100;
         pbExperiencia.setProgress(progresoEnBarra);
 
+        animarBarraXP(progresoEnBarra);
+        animarPersonaje();
         // Cambiamos los dibujos según la skin que tenga puesta
         int iconoRecurso = obtenerRecursoSkin(personaje.getSkinActiva());
         ivSkinPersonajeGrande.setImageResource(iconoRecurso);
         ivMiniAvatar.setImageResource(iconoRecurso);
-
     }
 
     private int obtenerRecursoSkin(int idSkin) {
-        // Aquí puedes poner tus imágenes finales luego. Usamos iconos nativos para probar.
-        if (idSkin == 2) return android.R.drawable.star_on; // Skin Nivel 2
-        if (idSkin == 3) return android.R.drawable.ic_menu_camera; // Skin Nivel 5
-        return R.drawable.ic_person; // Skin Nivel 1
+        // Reemplazamos los iconos nativos por tus archivos PNG
+        switch (idSkin) {
+            case 2:
+                return R.drawable.mapache; // Asegúrate de tener pj2.png
+            case 3:
+                return R.drawable.pj1; // Asegúrate de tener pj3.png
+            default:
+                return R.drawable.pj1; // Tu imagen base pj1.png
+        }
     }
 
     private void mostrarArmario() {
@@ -151,17 +167,19 @@ public class CharacterFragment extends Fragment {
     private MaterialButton crearBotonSkin(String texto, int idSkin, boolean desbloqueado, BottomSheetDialog dialog) {
         MaterialButton btn = new MaterialButton(requireContext());
         btn.setText(texto);
-        btn.setPadding(0, 30, 0, 30);
 
-        if (!desbloqueado) {
-            btn.setEnabled(false); // No se puede tocar
-            btn.setAlpha(0.5f); // Se ve transparente
-            btn.setIcon(ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_secure)); // Candado
-        } else {
+        // Mostramos una miniatura en el botón si está desbloqueado
+        if (desbloqueado) {
+            btn.setIcon(ContextCompat.getDrawable(requireContext(), obtenerRecursoSkin(idSkin)));
+            btn.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
             btn.setOnClickListener(v -> {
                 dialog.dismiss();
                 guardarNuevaSkin(idSkin);
             });
+        } else {
+            btn.setEnabled(false);
+            btn.setAlpha(0.5f);
+            btn.setIcon(ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_secure));
         }
         return btn;
     }
@@ -184,5 +202,31 @@ public class CharacterFragment extends Fragment {
                 Toast.makeText(getContext(), "Error al guardar", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void animarPersonaje() {
+        // Creamos una animación de escala en X e Y
+        ivSkinPersonajeGrande.setScaleX(0.7f); // Empezamos pequeñito
+        ivSkinPersonajeGrande.setScaleY(0.7f);
+
+        ivSkinPersonajeGrande.animate()
+                .scaleX(1f) // Volvemos al tamaño original
+                .scaleY(1f)
+                .setDuration(500) // Media segundo de duración
+                .setInterpolator(new android.view.animation.BounceInterpolator()) // El efecto rebote mágico
+                .start();
+    }
+
+    private void animarBarraXP(int valorFinal) {
+        // Forzamos que empiece en 0 por si acaso
+        pbExperiencia.setProgress(0);
+
+        // Creamos el animador: (objeto, propiedad, valor inicial, valor final)
+        ObjectAnimator animation = ObjectAnimator.ofInt(pbExperiencia, "progress", 0, valorFinal);
+
+        animation.setDuration(1200); // 1.2 segundos para que se vea el recorrido
+        // Usamos Decelerate para que empiece rápido y frene suave al llegar al final
+        animation.setInterpolator(new android.view.animation.DecelerateInterpolator());
+        animation.start();
     }
 }

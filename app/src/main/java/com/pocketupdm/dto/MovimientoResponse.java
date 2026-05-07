@@ -8,6 +8,7 @@ import java.time.LocalDate;
 
 public class MovimientoResponse {
     private Long id;
+    private String nombre;
     private BigDecimal importe;
     private String fecha;
     private MovementType tipo;
@@ -19,6 +20,7 @@ public class MovimientoResponse {
     public Long getId() {
         return id;
     }
+    public String getNombre() { return nombre; }
 
     public BigDecimal getImporte() {
         return importe;

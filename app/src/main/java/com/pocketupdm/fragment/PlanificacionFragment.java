@@ -47,7 +47,11 @@ public class PlanificacionFragment extends Fragment {
     private MetaAdapter metaAdapter;
     private PresupuestoAdapter presupuestoAdapter; // <-- NUEVO
 
-    private ExtendedFloatingActionButton fabAgregar;
+    private com.google.android.material.button.MaterialButton fabAgregar;
+
+    private View layoutEmpty;
+    private android.widget.ImageView ivEmpty;
+    private android.widget.TextView tvEmptyTitulo, tvEmptySub;
 
 
     public PlanificacionFragment() {
@@ -69,6 +73,10 @@ public class PlanificacionFragment extends Fragment {
         recyclerView = view.findViewById(R.id.rv_planificacion);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         fabAgregar = view.findViewById(R.id.fab_agregar_plan);
+        layoutEmpty = view.findViewById(R.id.layout_empty_planificacion);
+        ivEmpty = view.findViewById(R.id.iv_empty_planificacion);
+        tvEmptyTitulo = view.findViewById(R.id.tv_empty_titulo_planificacion);
+        tvEmptySub = view.findViewById(R.id.tv_empty_sub_planificacion);
 
         // ✅ ¡AQUÍ ESTÁ LA MAGIA! Se abre solo cuando tocas el botón
         fabAgregar.setOnClickListener(v -> {
@@ -91,9 +99,11 @@ public class PlanificacionFragment extends Fragment {
                 if (tab.getPosition() == 0) {
                     mostrarPresupuestos();
                     fabAgregar.setText("Nuevo Presupuesto"); // Cambia el texto del botón
+                    fabAgregar.setIconResource(R.drawable.ic_wallet);
                 } else {
                     mostrarMetas();
                     fabAgregar.setText("Nueva Meta"); // Cambia el texto del botón
+                    fabAgregar.setIconResource(R.drawable.ic_pig);
                 }
             }
 
@@ -104,6 +114,9 @@ public class PlanificacionFragment extends Fragment {
 
         // Por defecto
         mostrarPresupuestos();
+        fabAgregar.setText("Nuevo Presupuesto");
+        fabAgregar.setIconResource(R.drawable.ic_wallet);
+
     }
 
     // ==========================================
@@ -120,6 +133,8 @@ public class PlanificacionFragment extends Fragment {
 
                 if (response.isSuccessful() && response.body() != null) {
                     List<Presupuesto> presupuestos = response.body();
+                    // Verificamos si está vacío
+                    verificarEstadoVacio(presupuestos.isEmpty(), true);
                     configurarAdaptadorPresupuestos(presupuestos);
                 } else {
                     // --- AÑADE ESTO PARA DEBUG ---
@@ -209,7 +224,7 @@ public class PlanificacionFragment extends Fragment {
                         // Esto pondrá los "false" (no completadas) al principio.
                         return Boolean.compare(m1Completada, m2Completada);
                     });
-
+                    verificarEstadoVacio(metas.isEmpty(), false);
                     configurarAdaptadorMetas(metas);
                 }
             }
@@ -278,6 +293,26 @@ public class PlanificacionFragment extends Fragment {
                 Toast.makeText(getContext(), "Error al eliminar", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void verificarEstadoVacio(boolean estaVacio, boolean esPresupuesto) {
+        if (estaVacio) {
+            recyclerView.setVisibility(View.GONE);
+            layoutEmpty.setVisibility(View.VISIBLE);
+
+            if (esPresupuesto) {
+                ivEmpty.setImageResource(R.drawable.ic_wallet); // Usa un icono de billetera o moneda
+                tvEmptyTitulo.setText("Aún no tienes presupuestos");
+                tvEmptySub.setText("¡No dejes que tu dinero se escape!\nCrea un límite de gastos y empieza a ahorrar hoy mismo.");
+            } else {
+                ivEmpty.setImageResource(R.drawable.ic_pig); // Usa un icono de alcancía o billete
+                tvEmptyTitulo.setText("Tus metas están vacías");
+                tvEmptySub.setText("¿Un viaje? ¿Un coche nuevo? ¿Ahorros?\nDefine tu objetivo y nosotros te ayudaremos a alcanzarlo.");
+            }
+        } else {
+            recyclerView.setVisibility(View.VISIBLE);
+            layoutEmpty.setVisibility(View.GONE);
+        }
     }
 
 

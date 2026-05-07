@@ -111,4 +111,58 @@ public class DialogUtils {
 
         dialog.show();
     }
+
+    // =========================================================
+    // NUEVO: DIÁLOGO DE BLOQUEO / INFORMACIÓN (Ineludible, 1 solo botón)
+    // =========================================================
+    // =========================================================
+    // NUEVO: DIÁLOGO DE BLOQUEO / INFORMACIÓN (Ineludible, 1 solo botón)
+    // =========================================================
+    public static void mostrarDialogoBloqueo(Context context, String titulo, String mensaje,
+                                             String textoBoton, int colorBoton,
+                                             Runnable accionBoton) {
+
+        Dialog dialog = new Dialog(context);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setCancelable(false); // No se puede cerrar tocando fuera
+        dialog.setContentView(R.layout.layout_dialog_confirm);
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+            // 🚨 SOLUCIÓN 1: Forzar al diálogo a usar el 90% de la pantalla para que el texto no se aplaste
+            int width = (int)(context.getResources().getDisplayMetrics().widthPixels * 0.90);
+            dialog.getWindow().setLayout(width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+
+        TextView tvTitle = dialog.findViewById(R.id.tv_dialog_title);
+        TextView tvMessage = dialog.findViewById(R.id.tv_dialog_message);
+        MaterialButton btnCancel = dialog.findViewById(R.id.btn_dialog_cancel);
+        MaterialButton btnAction = dialog.findViewById(R.id.btn_dialog_action);
+
+        tvTitle.setText(titulo);
+        tvMessage.setText(mensaje);
+        btnAction.setText(textoBoton);
+
+        // Ocultamos el botón de cancelar
+        btnCancel.setVisibility(View.GONE);
+
+        // 🚨 SOLUCIÓN 2: Hacer que el botón de acción ocupe todo el ancho y se centre
+        android.view.ViewGroup.LayoutParams currentParams = btnAction.getLayoutParams();
+        if (currentParams instanceof LinearLayout.LayoutParams) {
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) currentParams;
+            params.width = LinearLayout.LayoutParams.MATCH_PARENT;
+            params.setMargins(0, 10, 0, 0); // Un pequeño margen superior para que respire
+            btnAction.setLayoutParams(params);
+        }
+
+        btnAction.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(context, colorBoton)));
+
+        btnAction.setOnClickListener(v -> {
+            dialog.dismiss();
+            accionBoton.run();
+        });
+
+        dialog.show();
+    }
 }

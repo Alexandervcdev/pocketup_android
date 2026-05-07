@@ -57,12 +57,21 @@ public class MovimientoAdapter extends RecyclerView.Adapter<MovimientoAdapter.Mo
     public void onBindViewHolder(@NonNull MovimientoViewHolder holder, int position) {
         MovimientoResponse movimiento = movimientosList.get(position);
 
-        // 1. Textos básicos (Nota y Fecha)
-        String notaPrincipal = (movimiento.getNota() != null && !movimiento.getNota().isEmpty())
-                ? movimiento.getNota()
-                : (movimiento.getCategoria() != null ? movimiento.getCategoria().getNombre() : "Sin descripción");
-        holder.tvNota.setText(notaPrincipal);
-        holder.tvFecha.setText(movimiento.getFecha());
+        // 1. Textos básicos (Nombre/Título y Fecha/Nota)
+
+        // El título principal ahora es el NOMBRE que pusimos obligatorio
+        String tituloPrincipal = (movimiento.getNombre() != null && !movimiento.getNombre().trim().isEmpty())
+                ? movimiento.getNombre()
+                : "Sin Título"; // Por si tienes datos viejos en la BBDD
+
+        holder.tvNota.setText(tituloPrincipal); // Seguimos usando tu id tvNota para el título principal
+
+        // Para la fecha (y podemos incluir la nota si quieres como subtítulo)
+        String subtitulo = movimiento.getFecha();
+        if (movimiento.getNota() != null && !movimiento.getNota().equals("Sin nota") && !movimiento.getNota().trim().isEmpty()) {
+            subtitulo = movimiento.getFecha() + " • " + movimiento.getNota();
+        }
+        holder.tvFecha.setText(subtitulo);
 
         // 2. Lógica del Importe (+/- y Color del texto)
         if (movimiento.getTipo() == MovementType.INGRESO) {

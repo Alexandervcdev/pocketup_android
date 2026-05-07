@@ -15,6 +15,9 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.pocketupdm.dto.EstadoSistemaResponse;
+import com.pocketupdm.utils.DialogUtils;
 import com.pocketupdm.utils.SessionManager;
 
 import androidx.activity.EdgeToEdge;
@@ -85,6 +88,7 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         super.onCreate(savedInstanceState);
+        verificarMantenimiento();
 
         // 2. AUTO-LOGIN (Ahorro de recursos)
         SessionManager sessionManager = new SessionManager(this);
@@ -155,16 +159,32 @@ public class LoginActivity extends AppCompatActivity {
      * @param password La contraseña ingresada por el usuario.
      */
     private void LoginManualClickListener(String email, String password) {
-        btnLogin.setEnabled(false);
-        UsuarioLoginRequest request = new UsuarioLoginRequest(email, password);
+                        btnLogin.setEnabled(false);
+                        UsuarioLoginRequest request = new UsuarioLoginRequest(email, password);
 
-        RetrofitClient.getApiService().loginUser(request).enqueue(new Callback<Usuario>() {
-            @Override
-            public void onResponse(Call<Usuario> call, Response<Usuario> response) {
-                btnLogin.setEnabled(true);
+                        RetrofitClient.getApiService().loginUser(request).enqueue(new Callback<Usuario>() {
+                            @Override
+                            public void onResponse(Call<Usuario> call, Response<Usuario> response) {
+                                btnLogin.setEnabled(true);
 
-                if (response.isSuccessful()) {
-                    // LÓGICA DE RECORDAR USUARIO
+                                if (response.isSuccessful() && response.body() != null) {
+                                    Usuario usuario = response.body();
+
+                                    // --- 🚨 NUEVO: BARRERA DE SEGURIDAD PARA SUSPENDIDOS ---
+                                    if ("SUSPENDIDO".equals(usuario.getEstado())) {
+                                        DialogUtils.mostrarDialogoBloqueo(
+                                                LoginActivity.this,
+                                                "Acceso Denegado",
+                                                "Tu cuenta ha sido suspendida por un administrador.\n\nContacta con pocketup.soporte@gmail.com para más información.",
+                                                "Entendido",
+                                                R.color.red,
+                                                () -> {}
+                                        );
+                                        return; // Cortamos la ejecución, no se guarda sesión ni avanza.
+                                    }
+                    // ---------------------------------------------------------
+
+                    // LÓGICA DE RECORDAR USUARIO (Solo si no está suspendido)
                     SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                     SharedPreferences.Editor editor = preferences.edit();
                     if (chRemember.isChecked()) {
@@ -172,14 +192,11 @@ public class LoginActivity extends AppCompatActivity {
                         editor.putString(PREF_PASS, password);
                         editor.putBoolean(PREF_REMEMBER, true);
                     } else {
-                        editor.clear(); // Borra todo si el usuario desmarcó la casilla
+                        editor.clear();
                     }
                     editor.apply();
 
-                    // ÉXITO: El servidor devolvió el objeto Usuario
-                    Usuario usuario = response.body();
                     SessionManager sessionManager = new SessionManager(LoginActivity.this);
-                    // 2. Guardamos el ID y el Nombre del usuario
                     sessionManager.crearSesion(usuario.getId(), usuario.getNombre());
                     Toast.makeText(LoginActivity.this, "¡Bienvenido " + usuario.getNombre() + "!", Toast.LENGTH_SHORT).show();
                     irAMainActivity(LoginActivity.this);
@@ -192,7 +209,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<Usuario> call, Throwable t) {
                 btnLogin.setEnabled(true);
-                Log.e("POCKET_APP", "Fallo de red", t); // Siguiendo tu filtro de Logcat [cite: 16]
+                Log.e("POCKET_APP", "Fallo de red", t);
                 Toast.makeText(LoginActivity.this, "Error de conexión", Toast.LENGTH_SHORT).show();
             }
         });
@@ -298,10 +315,9 @@ public class LoginActivity extends AppCompatActivity {
      * @param firebaseUser Objeto que contiene la información del usuario autenticado en Firebase.
      */
     private void sincronizarUsuarioConBackend(FirebaseUser firebaseUser) {
-        // Extraer los datos de Google/Firebase
         String nombre = firebaseUser.getDisplayName();
         String email = firebaseUser.getEmail();
-        String uid = firebaseUser.getUid(); // UID como "contraseña" de seguridad
+        String uid = firebaseUser.getUid();
 
         if (nombre == null || nombre.isEmpty()) {
             nombre = email.split("@")[0];
@@ -313,15 +329,30 @@ public class LoginActivity extends AppCompatActivity {
         request.setPassword(uid);
 
         ApiService api = RetrofitClient.getApiService();
-        Call<Usuario> call = api.googleAuth(request);
-        call.enqueue(new retrofit2.Callback<Usuario>() {
+        api.googleAuth(request).enqueue(new retrofit2.Callback<Usuario>() {
             @Override
             public void onResponse(Call<Usuario> call, retrofit2.Response<Usuario> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     Usuario usuarioGoogle = response.body();
+
+                    // --- 🚨 NUEVO: BARRERA DE SEGURIDAD GOOGLE ---
+                    if ("SUSPENDIDO".equals(usuarioGoogle.getEstado())) {
+                        mAuth.signOut(); // Deslogueamos de Firebase inmediatamente para no dejar sesiones fantasma
+
+                        DialogUtils.mostrarDialogoBloqueo(
+                                LoginActivity.this,
+                                "Acceso Denegado",
+                                "Tu cuenta ha sido suspendida por un administrador.\n\nContacta con admin@pocketup.com para más información.",
+                                "Entendido",
+                                R.color.red,
+                                () -> {}
+                        );
+                        return; // Cortamos aquí
+                    }
+                    // ---------------------------------------------
+
                     SessionManager sessionManager = new SessionManager(LoginActivity.this);
                     sessionManager.crearSesion(usuarioGoogle.getId(), usuarioGoogle.getNombre());
-                    //Log.d("LOGIN", "Usuario de Google registrado en el backend");
                     Toast.makeText(LoginActivity.this, "¡Bienvenido " + usuarioGoogle.getNombre() + "!", Toast.LENGTH_SHORT).show();
                     irAMainActivity(LoginActivity.this);
                 } else {
@@ -389,6 +420,39 @@ public class LoginActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(LoginActivity.this, RegisterActivity.class);
                 startActivity(intent);
+            }
+        });
+    }
+
+
+    private void verificarMantenimiento() {
+        RetrofitClient.getApiService().verificarEstadoSistema().enqueue(new retrofit2.Callback<EstadoSistemaResponse>() {
+            @Override
+            public void onResponse(Call<EstadoSistemaResponse> call, retrofit2.Response<EstadoSistemaResponse> response) {
+                // 🚨 NUEVO: Comprobamos que la actividad siga viva antes de mostrar un diálogo
+                if (isFinishing() || isDestroyed()) return;
+
+                if (response.isSuccessful() && response.body() != null) {
+                    EstadoSistemaResponse estado = response.body();
+
+                    if (estado.isMantenimientoActivo()) {
+                        com.pocketupdm.utils.DialogUtils.mostrarDialogoBloqueo(
+                                LoginActivity.this,
+                                estado.getTituloMantenimiento(),
+                                estado.getMensajeMantenimiento(),
+                                "Cerrar Aplicación",
+                                R.color.red,
+                                () -> {
+                                    finishAffinity();
+                                }
+                        );
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<EstadoSistemaResponse> call, Throwable t) {
+                // Falla silenciosamente, permitiendo el uso offline
             }
         });
     }
